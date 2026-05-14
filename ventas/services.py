@@ -220,6 +220,45 @@ def get_textos_ayuda(codi):
     return ["No hay información disponible."]
 
 
+# ------------------------------------------------------------------ CUPONES
+def get_proximo_cupon(evn):
+    row = _fetchone(
+        'SELECT "EVNC_SEC" FROM "EVNC_CAR"'
+        ' WHERE "EVNC_NUM" = %s AND "EVNC_EST" = %s'
+        ' ORDER BY "EVNC_SEC" LIMIT 1',
+        (evn, 'P')
+    )
+    return int(row[0]) if row else None
+
+
+def get_cartones_cupon(evn, sec):
+    rows = _fetchall(
+        'SELECT A."EVNC_NUM", A."EVNC_SEC", A."EVNC_SUB",'
+        '       B."MTZ_NUM", B."CAR_SER", B."CAR_NUM",'
+        '       B."CAR_LIS", A."EVNC_TPO", A."EVNC_EST"'
+        '  FROM "EVNC_CAR" A'
+        '  LEFT JOIN "MTZ_CAR" B'
+        '    ON B."MTZ_NUM" = A."MTZ_NUM" AND B."CAR_SER" = A."CAR_SER"'
+        '   AND B."CAR_NUM" = A."CAR_NUM"'
+        ' WHERE A."EVNC_NUM" = %s AND A."EVNC_SEC" = %s'
+        ' ORDER BY A."EVNC_NUM", A."EVNC_SEC", A."EVNC_SUB"',
+        (evn, sec)
+    )
+    return [
+        {
+            "sub":  str(r[2] or ""),
+            "ser":  str(r[4] or ""),
+            "num":  str(r[5] or ""),
+            "lis":  _decodificar_lis(str(r[6] or "")),
+        }
+        for r in rows
+    ]
+
+
+def _decodificar_lis(lis):
+    return [transformar_texto(p) for p in lis.split(":") if p.strip()]
+
+
 # ------------------------------------------------------------------ PUBLICACIONES
 def get_publicaciones(evn):
     hoy = fecha_hoy_aaaammdd()

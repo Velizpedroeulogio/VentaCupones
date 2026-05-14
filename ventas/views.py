@@ -100,3 +100,34 @@ def ayuda(request, evn, codi):
 def logout_view(request, evn):
     request.session.flush()
     return redirect("ventas:login", evn=evn)
+
+
+def seleccionar_view(request, evn):
+    if request.session.get("evn") != evn:
+        return redirect("ventas:login", evn=evn)
+    return render(request, "ventas/seleccionar.html", {
+        "evn":        evn,
+        "img_evento": svc.get_imagen_evento(evn),
+    })
+
+
+@csrf_exempt
+def proximo_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    sec = svc.get_proximo_cupon(evn)
+    if not sec:
+        return JsonResponse({"ok": False, "error": "No hay cupones disponibles"})
+    cartones = svc.get_cartones_cupon(evn, sec)
+    return JsonResponse({"ok": True, "sec": sec, "cartones": cartones})
+
+
+def confirmar_cupon(request, evn):
+    if request.method != "POST":
+        return redirect("ventas:seleccionar", evn=evn)
+    if request.session.get("evn") != evn:
+        return redirect("ventas:login", evn=evn)
+    request.session["cupon_sec"] = request.POST.get("sec", "")
+    return redirect("ventas:principal", evn=evn)

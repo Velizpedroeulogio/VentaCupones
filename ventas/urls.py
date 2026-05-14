@@ -9,5 +9,8 @@ urlpatterns = [
     path("<int:evn>/principal/",          views.principal,     name="principal"),
     path("<int:evn>/logout/",             views.logout_view,   name="logout"),
     path("<int:evn>/sorteos/<int:fecha>/", views.sorteos_fecha, name="sorteos"),
-    path("<int:evn>/ayuda/<str:codi>/",   views.ayuda,         name="ayuda"),
+    path("<int:evn>/ayuda/<str:codi>/",    views.ayuda,          name="ayuda"),
+    path("<int:evn>/seleccionar/",         views.seleccionar_view, name="seleccionar"),
+    path("<int:evn>/seleccionar/proximo/", views.proximo_api,    name="proximo_api"),
+    path("<int:evn>/seleccionar/confirmar/", views.confirmar_cupon, name="confirmar_cupon"),
 ]
