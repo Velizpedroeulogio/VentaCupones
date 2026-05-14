@@ -138,10 +138,6 @@ def cambiar_pwd(evn, usuario, pwd_nueva):
 
 # ------------------------------------------------------------------ PVT_SORT
 def get_pvt_sort(evn):
-    """
-    Recupera el registro de PVT_SORT vigente para hoy.
-    Toma la primera PVT_FCHX <= hoy (la más reciente definición).
-    """
     hoy = fecha_hoy_aaaammdd()
     row = _fetchone(
         'SELECT "PVT_FCHX","PVT_FCHD","PVT_FCHH",'
@@ -162,11 +158,35 @@ def get_pvt_sort(evn):
                 precios[i] = float(val)
             except Exception:
                 pass
+    rangos = {}
+    try:
+        rrow = _fetchone(
+            'SELECT "PVT_SCD1","PVT_SCH1","PVT_SCD2","PVT_SCH2",'
+            '       "PVT_SCD3","PVT_SCH3","PVT_SCD4","PVT_SCH4",'
+            '       "PVT_SCD5","PVT_SCH5","PVT_SCD6","PVT_SCH6",'
+            '       "PVT_SCD7","PVT_SCH7","PVT_SCD8","PVT_SCH8",'
+            '       "PVT_SCD9","PVT_SCH9"'
+            ' FROM "PVT_SORT"'
+            ' WHERE "PVT_EVN" = %s AND "PVT_FCHX" <= %s'
+            ' ORDER BY "PVT_FCHX" DESC LIMIT 1',
+            (evn, hoy)
+        )
+        if rrow:
+            for i in range(1, 10):
+                scd, sch = rrow[(i - 1) * 2], rrow[(i - 1) * 2 + 1]
+                if scd is not None and sch is not None:
+                    try:
+                        rangos[i] = {"scd": int(scd), "sch": int(sch)}
+                    except Exception:
+                        pass
+    except Exception:
+        pass
     return {
         "pvt_fchx": row[0],
         "pvt_fchd": row[1],
         "pvt_fchh": row[2],
         "precios":  precios,
+        "rangos":   rangos,
     }
 
 
@@ -274,6 +294,46 @@ def _decodificar_lis(lis, car_num):
             result.append(d1 + d2)
         i += 3
     return result
+
+
+# ------------------------------------------------------------------ CODIFICACION
+def _codificar_num(num):
+    n = int(num)
+    tens, units = n // 10, n % 10
+    def _idx(d): return 9 if d == 0 else d - 1
+    enc_odd  = _KEY1[_idx(tens)] + _KEY2[_idx(units)]
+    enc_even = _KEY2[_idx(tens)] + _KEY1[_idx(units)]
+    return enc_odd, enc_even
+
+
+def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
+    params = [evn, scd, sch]
+    if nums_pref:
+        like_parts = []
+        for num in nums_pref:
+            enc_odd, enc_even = _codificar_num(num)
+            like_parts.append('(B."CAR_LIS" LIKE %s OR B."CAR_LIS" LIKE %s)')
+            params += [f'%{enc_odd}:%', f'%{enc_even}:%']
+        sql = (
+            'SELECT DISTINCT A."EVNC_SEC"'
+            '  FROM "EVNC_CAR" A'
+            '  LEFT JOIN "MTZ_CAR" B'
+            '    ON B."MTZ_NUM" = A."MTZ_NUM" AND B."CAR_SER" = A."CAR_SER"'
+            '   AND B."CAR_NUM" = A."CAR_NUM"'
+            ' WHERE A."EVNC_NUM" = %s AND A."EVNC_SEC" BETWEEN %s AND %s'
+            "   AND A.\"EVNC_EST\" = 'P'"
+            '   AND ' + ' AND '.join(like_parts) +
+            ' ORDER BY A."EVNC_SEC" LIMIT 5'
+        )
+    else:
+        sql = (
+            'SELECT "EVNC_SEC" FROM "EVNC_CAR"'
+            ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" BETWEEN %s AND %s'
+            "   AND \"EVNC_EST\" = 'P'"
+            ' ORDER BY "EVNC_SEC" LIMIT 5'
+        )
+    rows = _fetchall(sql, params)
+    return [int(r[0]) for r in rows]
 
 
 # ------------------------------------------------------------------ PUBLICACIONES

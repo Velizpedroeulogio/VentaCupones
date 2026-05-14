@@ -105,9 +105,14 @@ def logout_view(request, evn):
 def seleccionar_view(request, evn):
     if request.session.get("evn") != evn:
         return redirect("ventas:login", evn=evn)
+    pvt = svc.get_pvt_sort(evn)
+    cantidades = []
+    if pvt:
+        cantidades = sorted(i for i in pvt["precios"] if i in pvt["rangos"])
     return render(request, "ventas/seleccionar.html", {
         "evn":        evn,
         "img_evento": svc.get_imagen_evento(evn),
+        "cantidades": cantidades,
     })
 
 
@@ -117,9 +122,43 @@ def proximo_api(request, evn):
         return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
     if request.session.get("evn") != evn:
         return JsonResponse({"ok": False, "error": "Sesión inválida"})
-    sec = svc.get_proximo_cupon(evn)
-    if not sec:
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "JSON inválido"}, status=400)
+
+    try:
+        cantidad = int(body.get("cantidad", 0))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Cantidad inválida"})
+    nums_pref = body.get("nums_pref") or []
+
+    pvt = svc.get_pvt_sort(evn)
+    if not pvt or cantidad not in pvt.get("rangos", {}):
+        return JsonResponse({"ok": False, "error": "Cantidad no configurada"})
+
+    rango = pvt["rangos"][cantidad]
+    secuencias = svc.get_secuencias_disponibles(evn, rango["scd"], rango["sch"], nums_pref or None)
+    if not secuencias:
         return JsonResponse({"ok": False, "error": "No hay cupones disponibles"})
+
+    cartones = svc.get_cartones_cupon(evn, secuencias[0])
+    return JsonResponse({"ok": True, "secuencias": secuencias, "sec": secuencias[0], "cartones": cartones})
+
+
+@csrf_exempt
+def cartones_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    try:
+        body = json.loads(request.body)
+        sec = int(body.get("sec", 0))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Datos inválidos"}, status=400)
+    if not sec:
+        return JsonResponse({"ok": False, "error": "Secuencia inválida"})
     cartones = svc.get_cartones_cupon(evn, sec)
     return JsonResponse({"ok": True, "sec": sec, "cartones": cartones})
 
