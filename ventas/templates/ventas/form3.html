@@ -19,7 +19,7 @@
     <div class="byl-card">
         {% for s in sorteos %}
         <div class="mb-2">
-            <div><strong>{{ s.dscr|default:"Sorteo "|add:s.nro }}</strong></div>
+            <div><strong>{{ s.dscr }}</strong></div>
             {% if s.pre1 %}<div style="font-size:13px;">Premio: {{ s.pre1 }}</div>{% endif %}
             {% if s.pre2 %}<div style="font-size:13px;">Pronto: {{ s.pre2 }}</div>{% endif %}
         </div>
