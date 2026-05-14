@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Venta de Cupones — Acceso{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-3">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% else %}
+    <div class="mt-3 mb-2 byl-title">{{ evento_desc }}</div>
+    {% endif %}
+
+    <div id="div-error" class="byl-error" style="display:none"></div>
+
+    <!-- Vista: sesión guardada -->
+    <div id="div-sesion" style="display:none">
+        <div class="mt-2 mb-1"><strong>Bienvenido/a, <span id="lbl-nombre"></span></strong></div>
+        <div class="mb-1" style="font-size:13px;color:#555;">Usuario: <span id="lbl-usuario"></span></div>
+        <div class="d-flex gap-2 mt-3 flex-wrap">
+            <button class="byl-btn" onclick="confirmarSesion()">Confirmar</button>
+            <button class="byl-btn" onclick="cambiarSesion()">Cambiar</button>
+            <button class="byl-btn" onclick="mostrarRecuperar()">Recuperar</button>
+        </div>
+    </div>
+
+    <!-- Vista: ingreso manual -->
+    <div id="div-ingreso">
+        <div class="mt-3 byl-field mb-2">
+            <label for="inp-usuario">Usuario</label>
+            <input type="text" id="inp-usuario" autocomplete="username"
+                   inputmode="email" placeholder="Usuario">
+        </div>
+        <div class="byl-field mb-3">
+            <label for="inp-pwd">Contraseña</label>
+            <input type="password" id="inp-pwd" autocomplete="current-password"
+                   placeholder="Contraseña">
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="byl-btn" onclick="ingresar()">Confirmar</button>
+            <button class="byl-btn" onclick="mostrarRecuperar()">Recuperar</button>
+        </div>
+    </div>
+
+    <!-- Vista: recuperar contraseña -->
+    <div id="div-recuperar" style="display:none">
+        <div class="mt-3 mb-2" style="font-size:13px;">
+            Ingresá tu usuario y referencia (mail o WhatsApp) para recuperar el acceso.
+        </div>
+        <div class="byl-field mb-2">
+            <label for="inp-rec-usuario">Usuario</label>
+            <input type="text" id="inp-rec-usuario" placeholder="Usuario">
+        </div>
+        <div class="byl-field mb-3">
+            <label for="inp-rec-refe">Referencia (mail o WhatsApp)</label>
+            <input type="text" id="inp-rec-refe" placeholder="mail o número">
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="byl-btn" onclick="recuperar()">Enviar</button>
+            <button class="byl-btn" onclick="volverAIngreso()">Cancelar</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const EVN      = {{ evn }};
+const LS_KEY   = 'vtsc_ses_' + EVN;
+const HOY      = new Date().toISOString().slice(0, 10);
+
+function mostrarError(msg) {
+    const d = document.getElementById('div-error');
+    d.textContent = msg;
+    d.style.display = msg ? '' : 'none';
+}
+
+function ocultarTodo() {
+    document.getElementById('div-sesion').style.display  = 'none';
+    document.getElementById('div-ingreso').style.display = 'none';
+    document.getElementById('div-recuperar').style.display = 'none';
+    mostrarError('');
+}
+
+function mostrarRecuperar() {
+    ocultarTodo();
+    document.getElementById('div-recuperar').style.display = '';
+}
+
+function volverAIngreso() {
+    ocultarTodo();
+    document.getElementById('div-ingreso').style.display = '';
+}
+
+function cambiarSesion() {
+    localStorage.removeItem(LS_KEY);
+    ocultarTodo();
+    document.getElementById('div-ingreso').style.display = '';
+    document.getElementById('inp-usuario').focus();
+}
+
+function guardarSesion(usuario, pwd, nombre) {
+    localStorage.setItem(LS_KEY, JSON.stringify({u: usuario, p: pwd, n: nombre, f: HOY}));
+}
+
+function cargarSesion() {
+    try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return null;
+        const ses = JSON.parse(raw);
+        if (ses.f !== HOY) { localStorage.removeItem(LS_KEY); return null; }
+        return ses;
+    } catch(e) { return null; }
+}
+
+function iniciar() {
+    const ses = cargarSesion();
+    if (ses) {
+        document.getElementById('lbl-nombre').textContent  = ses.n || ses.u;
+        document.getElementById('lbl-usuario').textContent = ses.u;
+        document.getElementById('div-sesion').style.display  = '';
+        document.getElementById('div-ingreso').style.display = 'none';
+    } else {
+        document.getElementById('div-sesion').style.display  = 'none';
+        document.getElementById('div-ingreso').style.display = '';
+    }
+}
+
+function enviarLogin(usuario, pwd) {
+    mostrarError('');
+    fetch('/{{ evn }}/login/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json',
+                  'X-CSRFToken': getCookie('csrftoken')},
+        body: JSON.stringify({usuario: usuario, pwd: pwd})
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.ok) {
+            guardarSesion(usuario, pwd, d.nombre);
+            window.location.href = '/{{ evn }}/principal/';
+        } else {
+            mostrarError(d.error || 'Error de acceso');
+        }
+    })
+    .catch(() => mostrarError('Error de conexión'));
+}
+
+function confirmarSesion() {
+    const ses = cargarSesion();
+    if (!ses) { cambiarSesion(); return; }
+    enviarLogin(ses.u, ses.p);
+}
+
+function ingresar() {
+    const usuario = document.getElementById('inp-usuario').value.trim();
+    const pwd     = document.getElementById('inp-pwd').value;
+    if (!usuario || !pwd) { mostrarError('Ingresá usuario y contraseña'); return; }
+    enviarLogin(usuario, pwd);
+}
+
+function recuperar() {
+    const usuario = document.getElementById('inp-rec-usuario').value.trim();
+    const refe    = document.getElementById('inp-rec-refe').value.trim();
+    if (!usuario || !refe) { mostrarError('Completá los datos'); return; }
+    mostrarError('Función de recuperación próximamente disponible.');
+}
+
+function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+}
+
+iniciar();
+</script>
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Venta de Cupones{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% else %}
+    <div class="mt-3 mb-1 byl-title">{{ evento_desc }}</div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mt-1 mb-3">
+        <span style="font-size:13px;color:#555;">Hola, <strong>{{ nombre }}</strong></span>
+        <a class="byl-btn" href="{% url 'ventas:logout' evn %}" style="font-size:12px;padding:4px 10px;">Salir</a>
+    </div>
+
+    {% if precios_lista %}
+    <div class="byl-section-title mt-2">Precios</div>
+    <div class="ms-2 mt-1">
+        {% for p in precios_lista %}
+        <div>
+            <strong>{{ p.chns }} chance{{ p.chns|pluralize }}:</strong>
+            ${{ p.precio }}
+        </div>
+        {% endfor %}
+    </div>
+    {% if fchd_fmt and fchh_fmt %}
+    <div class="ms-2 mt-1" style="font-size:12px;color:#555;">
+        Vigencia: {{ fchd_fmt }} al {{ fchh_fmt }}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="byl-error mt-2">No hay período de venta configurado para hoy.</div>
+    {% endif %}
+
+    {% if fechas %}
+    <div class="byl-section-title mt-3">Sorteos</div>
+    <div class="d-flex flex-wrap gap-1 mt-1 ms-2">
+        {% for f in fechas %}
+        <span class="byl-btn-fecha">{{ f.fmt }}</span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if publicaciones %}
+    <div class="byl-section-title mt-3">Publicaciones</div>
+    <div class="mt-1">
+        {% for pub in publicaciones %}
+        <div class="mb-1">
+            {% if pub.enlc %}
+            <a href="{{ pub.enlc }}" target="_blank" style="color:var(--byl-accent);">{{ pub.dscr }}</a>
+            {% else %}
+            <span>{{ pub.dscr }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if img_sponsor %}
+    <div class="mt-3">
+        <img class="byl-img-evento" src="{{ img_sponsor }}" alt="Sponsors">
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
