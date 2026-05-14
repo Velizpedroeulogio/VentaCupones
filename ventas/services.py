@@ -332,7 +332,10 @@ def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
             "   AND \"EVNC_EST\" = 'P'"
             ' ORDER BY "EVNC_SEC" LIMIT 5'
         )
+    print(f"[DEBUG SQL] {sql}", flush=True)
+    print(f"[DEBUG PARAMS] {params}", flush=True)
     rows = _fetchall(sql, params)
+    print(f"[DEBUG ROWS] {rows}", flush=True)
     return [int(r[0]) for r in rows]
 
 
