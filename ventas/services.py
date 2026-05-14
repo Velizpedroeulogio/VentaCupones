@@ -193,6 +193,33 @@ def get_sorteos_de_fecha(evn, fecha):
     ]
 
 
+# ------------------------------------------------------------------ AYUDA
+def get_textos_ayuda(codi):
+    try:
+        rows = _fetchall(
+            'SELECT "HLPD_TEXT" FROM "HLP_TXT"'
+            ' WHERE "HLPD_CODI" = %s ORDER BY "HLPD_SECU"',
+            (codi,)
+        )
+        if rows:
+            return [str(r[0]) for r in rows if r[0]]
+    except Exception:
+        pass
+    if codi == "SOMOS":
+        return [
+            "ABG Servicios Informáticos es una empresa especializada en la automatización de procesos informáticos,",
+            "con más de 40 años de trayectoria, brindando soluciones a la industria azucarera, al comercio en general",
+            "y al sector financiero en particular.",
+        ]
+    if codi == "HELP1":
+        return [
+            "Esta aplicación permite la venta de Cupones Digitales de Bingo ABG.",
+            "Seleccioná una fecha de sorteo para ver los premios disponibles.",
+            "Elegí la cantidad de chances y el sistema te asignará tu cupón.",
+        ]
+    return ["No hay información disponible."]
+
+
 # ------------------------------------------------------------------ PUBLICACIONES
 def get_publicaciones(evn):
     hoy = fecha_hoy_aaaammdd()

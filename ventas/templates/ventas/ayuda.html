@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+    <div class="byl-title mt-3 mb-3">{{ titulo }}</div>
+    <div class="byl-card">
+        {% for linea in textos %}
+        <div class="mb-1">{{ linea }}</div>
+        {% endfor %}
+    </div>
+    <div class="mt-3">
+        <a class="byl-btn" href="{% url 'ventas:principal' evn %}">Volver</a>
+    </div>
+</div>
+{% endblock %}
