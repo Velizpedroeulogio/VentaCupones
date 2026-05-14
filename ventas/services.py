@@ -63,8 +63,8 @@ def get_imagen_evento(evn, static_url="/static/"):
     import os
     base = f"{static_url}ventas/img"
     img_dir = os.path.join("static", "ventas", "img")
-    for cand in [f"Evn{str(evn).zfill(5)}_02a.jpeg",
-                 f"Evn{str(evn).zfill(5)}_01.jpeg"]:
+    for cand in [f"Evn{evn}_02a.jpeg",
+                 f"Evn{evn}_01.jpeg"]:
         if os.path.exists(os.path.join(img_dir, cand)):
             return f"{base}/{cand}"
     return ""
@@ -74,7 +74,7 @@ def get_imagen_sponsor(evn, static_url="/static/"):
     import os
     base = f"{static_url}ventas/img"
     img_dir = os.path.join("static", "ventas", "img")
-    cand = f"Evn{str(evn).zfill(5)}_02b.jpeg"
+    cand = f"Evn{evn}_02b.jpeg"
     if os.path.exists(os.path.join(img_dir, cand)):
         return f"{base}/{cand}"
     return ""
