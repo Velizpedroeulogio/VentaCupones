@@ -55,15 +55,21 @@
     {% if publicaciones %}
     <div class="byl-card">
         <div class="byl-section-title mb-2">Publicaciones</div>
-        {% for pub in publicaciones %}
-        <div class="mb-1">
-            {% if pub.enlc %}
-            <a href="{{ pub.enlc }}" target="_blank" style="color:var(--byl-accent);">{{ pub.dscr }}</a>
-            {% else %}
-            <span>{{ pub.dscr }}</span>
-            {% endif %}
+        <div class="d-flex flex-wrap gap-2">
+            {% for pub in publicaciones %}
+            <div style="flex:0 0 auto;max-width:150px;text-align:center;">
+                {% if pub.enlc %}
+                <a href="{{ pub.enlc }}" target="_blank" style="text-decoration:none;color:inherit;">
+                    {% if pub.imag %}<img src="{{ pub.imag }}" alt="{{ pub.dscr }}" style="max-width:100%;max-height:80px;object-fit:contain;display:block;margin:0 auto 4px;">{% endif %}
+                    <span style="font-size:12px;color:var(--byl-accent);">{{ pub.dscr }}</span>
+                </a>
+                {% else %}
+                    {% if pub.imag %}<img src="{{ pub.imag }}" alt="{{ pub.dscr }}" style="max-width:100%;max-height:80px;object-fit:contain;display:block;margin:0 auto 4px;">{% endif %}
+                    <span style="font-size:12px;">{{ pub.dscr }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
     {% endif %}
 
