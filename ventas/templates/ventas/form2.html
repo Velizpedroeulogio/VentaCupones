@@ -36,16 +36,18 @@
     <!-- Precios -->
     {% if precios_lista %}
     <div class="byl-card">
-        <div class="byl-section-title mb-2">Precios</div>
+        <div class="byl-section-title mb-2">Precios de Cupones</div>
         {% for p in precios_lista %}
-        <div><strong>{{ p.chns }} chance{{ p.chns|pluralize }}:</strong> ${{ p.precio_fmt }}</div>
+        <div><strong>{{ p.chns }} Cartones o Chances:</strong> ${{ p.precio_fmt }}</div>
         {% endfor %}
     </div>
     {% endif %}
 
     <!-- ABG / Ayuda -->
     <div class="byl-card">
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+            <button class="byl-btn" type="button">Seleccionar Datos</button>
+            <button class="byl-btn" type="button">Confirmar</button>
             <a class="byl-btn" href="{% url 'ventas:ayuda' evn 'SOMOS' %}">ABG</a>
             <a class="byl-btn" href="{% url 'ventas:ayuda' evn 'HELP1' %}">Ayuda</a>
         </div>
