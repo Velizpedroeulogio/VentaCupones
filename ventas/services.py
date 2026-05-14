@@ -1,5 +1,9 @@
+import os
 from datetime import datetime
 from django.db import connection
+
+_KEY1 = os.environ.get("GBYL_KEY1", "dvtcksqonz")
+_KEY2 = os.environ.get("GBYL_KEY2", "ABCDEFGHIJ")
 
 
 # ------------------------------------------------------------------ DB HELPERS
@@ -249,14 +253,27 @@ def get_cartones_cupon(evn, sec):
             "sub":  str(r[2] or ""),
             "ser":  str(r[4] or ""),
             "num":  str(r[5] or ""),
-            "lis":  _decodificar_lis(str(r[6] or "")),
+            "lis":  _decodificar_lis(str(r[6] or ""), r[5] or 1),
         }
         for r in rows
     ]
 
 
-def _decodificar_lis(lis):
-    return [transformar_texto(p) for p in lis.split(":") if p.strip()]
+def _decodificar_lis(lis, car_num):
+    if not lis or lis[0].isdigit():
+        return [p for p in lis.split(":") if p.strip()]
+    key_first, key_second = (_KEY2, _KEY1) if int(car_num) % 2 == 0 else (_KEY1, _KEY2)
+    result = []
+    i = 0
+    while i + 1 < len(lis):
+        c1, c2 = lis[i], lis[i + 1]
+        pos1, pos2 = key_first.find(c1), key_second.find(c2)
+        if pos1 >= 0 and pos2 >= 0:
+            d1 = "0" if pos1 == 9 else str(pos1 + 1)
+            d2 = "0" if pos2 == 9 else str(pos2 + 1)
+            result.append(d1 + d2)
+        i += 3
+    return result
 
 
 # ------------------------------------------------------------------ PUBLICACIONES
