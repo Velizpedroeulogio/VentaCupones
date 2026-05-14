@@ -179,16 +179,16 @@ def get_fechas_sorteo(evn, fchd, fchh):
 
 def get_sorteos_de_fecha(evn, fecha):
     rows = _fetchall(
-        'SELECT A."Srt_Nro", B."SRT_NUM", B."SRT_PRE1", B."SRT_PRE2"'
+        'SELECT A."Srt_Nro", A."Srt_Dscr", B."SRT_PRE1", B."SRT_PRE2"'
         '  FROM "SrtFchNum" A'
         '  LEFT JOIN "SORTEOS" B'
-        '    ON B."EVN_NUM" = A."Evn_Num" AND B."SRT_NUM" = A."Srt_Rela"'
+        '    ON B."EVN_NUM" = A."Evn_Num" AND B."SRT_NUM" = A."Srt_Nro"'
         ' WHERE A."Evn_Num" = %s AND A."Srt_Fcha" = %s'
         ' ORDER BY A."Srt_Nro"',
         (evn, int(fecha))
     )
     return [
-        {"nro": str(r[0] or ""), "pre1": str(r[2] or ""), "pre2": str(r[3] or "")}
+        {"nro": str(r[0] or ""), "dscr": str(r[1] or ""), "pre1": str(r[2] or ""), "pre2": str(r[3] or "")}
         for r in rows
     ]
 
