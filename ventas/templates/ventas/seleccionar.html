@@ -52,10 +52,10 @@
                     <input type="hidden" id="inp-sec" name="sec" value="">
                     <button class="byl-btn" type="submit">Confirmo</button>
                 </form>
-                <button class="byl-btn" type="button" id="btn-anterior">Anterior</button>
-                <button class="byl-btn" type="button" id="btn-proximo-pag">Próximo</button>
+                <button class="byl-btn" type="button" id="btn-anterior" disabled>Anterior</button>
+                <button class="byl-btn" type="button" id="btn-proximo-pag" disabled>Próximo</button>
             </div>
-            <div class="byl-section-title mb-2">Cartones</div>
+            <div class="byl-section-title mb-2" id="titulo-cartones">Cartones</div>
             <div id="cartones-container"></div>
         </div>
     </div>
@@ -87,12 +87,13 @@ function actualizarPaginacion() {
 
 function renderCartones(sec, cartones) {
     document.getElementById('inp-sec').value = sec;
+    document.getElementById('titulo-cartones').textContent = `Cartones del Cupón ${sec}`;
     const cont = document.getElementById('cartones-container');
     if (!cartones.length) {
         cont.innerHTML = '<div class="byl-error">Sin cartones para este cupón.</div>';
     } else {
         cont.innerHTML = cartones.map((c, i) =>
-            `<div style="font-size:13px;margin-bottom:4px;"><strong>${i + 1}:</strong> ${(c.lis || []).join(' ')}</div>`
+            `<div style="font-size:13px;margin-bottom:4px;"><strong style="margin-right:10px;">${i + 1}:</strong>${(c.lis || []).join('&nbsp;&nbsp;')}</div>`
         ).join('');
     }
     document.getElementById('sec-resultado').style.display = '';
