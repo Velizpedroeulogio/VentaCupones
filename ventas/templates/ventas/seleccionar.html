@@ -52,8 +52,8 @@
                     <input type="hidden" id="inp-sec" name="sec" value="">
                     <button class="byl-btn" type="submit">Confirmo</button>
                 </form>
-                <button class="byl-btn" type="button" id="btn-anterior" disabled>Anterior</button>
-                <button class="byl-btn" type="button" id="btn-proximo-pag" disabled>Próximo</button>
+                <button class="byl-btn" type="button" id="btn-anterior" style="opacity:.4;pointer-events:none;">Anterior</button>
+                <button class="byl-btn" type="button" id="btn-proximo-pag" style="opacity:.4;pointer-events:none;">Próximo</button>
             </div>
             <div class="byl-section-title mb-2" id="titulo-cartones">Cartones</div>
             <div id="cartones-container"></div>
@@ -81,8 +81,18 @@ function mostrarError(msg) {
 }
 
 function actualizarPaginacion() {
-    document.getElementById('btn-anterior').disabled    = currentIdx === 0;
-    document.getElementById('btn-proximo-pag').disabled = currentIdx >= secuencias.length - 1;
+    const btnAnt = document.getElementById('btn-anterior');
+    const btnProx = document.getElementById('btn-proximo-pag');
+    if (currentIdx === 0) {
+        btnAnt.style.opacity = '.4'; btnAnt.style.pointerEvents = 'none';
+    } else {
+        btnAnt.style.opacity = '1'; btnAnt.style.pointerEvents = '';
+    }
+    if (currentIdx >= secuencias.length - 1) {
+        btnProx.style.opacity = '.4'; btnProx.style.pointerEvents = 'none';
+    } else {
+        btnProx.style.opacity = '1'; btnProx.style.pointerEvents = '';
+    }
 }
 
 function renderCartones(sec, cartones) {
@@ -93,7 +103,9 @@ function renderCartones(sec, cartones) {
         cont.innerHTML = '<div class="byl-error">Sin cartones para este cupón.</div>';
     } else {
         cont.innerHTML = cartones.map((c, i) =>
-            `<div style="font-size:13px;margin-bottom:4px;"><strong style="margin-right:10px;">${i + 1}:</strong>${(c.lis || []).join('&nbsp;&nbsp;')}</div>`
+            `<div style="font-size:13px;margin-bottom:6px;"><strong style="margin-right:8px;">${i + 1}:</strong>${
+                (c.lis || []).map(n => `<span style="display:inline-block;border:1px solid #aaa;border-radius:3px;padding:1px 3px;margin-right:3px;min-width:1.5em;text-align:center;">${n}</span>`).join('')
+            }</div>`
         ).join('');
     }
     document.getElementById('sec-resultado').style.display = '';
