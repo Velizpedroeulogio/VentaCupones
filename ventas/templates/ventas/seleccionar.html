@@ -116,13 +116,21 @@ async function fetchSecuencias(numsPref) {
             body: JSON.stringify(body)
         });
         const d = await r.json();
-        if (!d.ok) { mostrarError(d.error); return; }
+        if (!d.ok) { mostrarError(d.error); limpiarResultado(); return; }
         secuencias = d.secuencias;
         currentIdx = 0;
         renderCartones(d.sec, d.cartones);
     } catch(e) {
         mostrarError('Error de conexión');
+        limpiarResultado();
     }
+}
+
+function limpiarResultado() {
+    document.getElementById('sec-resultado').style.display = 'none';
+    document.getElementById('cartones-container').innerHTML = '';
+    secuencias = [];
+    currentIdx = 0;
 }
 
 async function fetchCartones(sec) {
