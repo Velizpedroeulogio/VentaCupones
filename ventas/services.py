@@ -327,7 +327,7 @@ def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
         )
     else:
         sql = (
-            'SELECT "EVNC_SEC" FROM "EVNC_CAR"'
+            'SELECT DISTINCT "EVNC_SEC" FROM "EVNC_CAR"'
             ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" BETWEEN %s AND %s'
             "   AND \"EVNC_EST\" = 'P'"
             ' ORDER BY "EVNC_SEC" LIMIT 5'
