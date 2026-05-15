@@ -1,0 +1,56 @@
+{% extends "mdl/base_mdl.html" %}
+{% block title %}Tablas{% endblock %}
+
+{% block content %}
+<h6 class="mb-2">Tablas</h6>
+
+<form method="get" class="row g-2 mb-3 align-items-end">
+    <div class="col-auto">
+        <label class="form-label mb-0" style="font-size:11px;">Catálogo</label>
+        <input type="text" name="catalogo" class="form-control form-control-sm" value="{{ catalogo }}">
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0" style="font-size:11px;">Esquema</label>
+        <input type="text" name="esquema" class="form-control form-control-sm" value="{{ esquema }}">
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0" style="font-size:11px;">Tabla (contiene)</label>
+        <input type="text" name="tabla" class="form-control form-control-sm" value="{{ tabla }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+        <a href="/mdl/" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+    </div>
+</form>
+
+<div class="table-responsive">
+<table class="table table-sm table-striped table-hover table-bordered mb-1">
+    <thead class="table-dark">
+        <tr>
+            <th><a href="{{ surls.table_catalog }}">Catálogo{% if sort == 'table_catalog' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.table_schema }}">Esquema{% if sort == 'table_schema' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.table_name }}">Tabla{% if sort == 'table_name' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.table_type }}">Tipo{% if sort == 'table_type' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr>
+            <td>{{ r.0 }}</td>
+            <td>{{ r.1 }}</td>
+            <td>{{ r.2 }}</td>
+            <td>{{ r.3 }}</td>
+            <td>
+                <a class="btn btn-outline-primary btn-sm py-0" href="/mdl/columnas/?esquema={{ r.1 }}&tabla={{ r.2 }}">Columnas</a>
+                <a class="btn btn-outline-secondary btn-sm py-0" href="/mdl/indices/?esquema={{ r.1 }}&tabla={{ r.2 }}">Índices</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted">Sin resultados</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+<div class="text-muted" style="font-size:11px;">{{ rows|length }} registros</div>
+{% endblock %}

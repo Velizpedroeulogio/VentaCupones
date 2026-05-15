@@ -1,0 +1,55 @@
+{% extends "mdl/base_mdl.html" %}
+{% block title %}Índices{% endblock %}
+
+{% block content %}
+<h6 class="mb-2">Índices</h6>
+
+<form method="get" class="row g-2 mb-3 align-items-end">
+    <div class="col-auto">
+        <label class="form-label mb-0" style="font-size:11px;">Esquema</label>
+        <input type="text" name="esquema" class="form-control form-control-sm" value="{{ esquema }}">
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0" style="font-size:11px;">Tabla (contiene)</label>
+        <input type="text" name="tabla" class="form-control form-control-sm" value="{{ tabla }}">
+    </div>
+    <div class="col-auto">
+        <label class="form-label mb-0" style="font-size:11px;">Índice (contiene)</label>
+        <input type="text" name="indice" class="form-control form-control-sm" value="{{ indice }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+        <a href="/mdl/indices/" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+    </div>
+</form>
+
+<div class="table-responsive">
+<table class="table table-sm table-striped table-hover table-bordered mb-1">
+    <thead class="table-dark">
+        <tr>
+            <th><a href="{{ surls.table_name }}">Tabla{% if sort == 'table_name' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.index_name }}">Índice{% if sort == 'index_name' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.column_name }}">Columna{% if sort == 'column_name' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.is_primary }}">PK{% if sort == 'is_primary' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.is_unique }}">Único{% if sort == 'is_unique' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.index_type }}">Tipo{% if sort == 'index_type' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in rows %}
+        <tr>
+            <td>{{ r.0 }}</td>
+            <td>{{ r.1 }}</td>
+            <td>{{ r.2 }}</td>
+            <td>{% if r.3 %}✓{% endif %}</td>
+            <td>{% if r.4 %}✓{% endif %}</td>
+            <td>{{ r.5 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted">Sin resultados</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+<div class="text-muted" style="font-size:11px;">{{ rows|length }} registros</div>
+{% endblock %}
