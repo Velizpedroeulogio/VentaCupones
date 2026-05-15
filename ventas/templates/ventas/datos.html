@@ -45,14 +45,22 @@
 <script>
 const URL_BUSCAR  = "{% url 'ventas:datos_buscar' evn %}";
 const URL_GUARDAR = "{% url 'ventas:datos_guardar' evn %}";
+const URL_LOOKUP  = "{% url 'ventas:datos_lookup' evn %}";
 const CSRF = "{{ csrf_token }}";
 
-const CAMPOS = [
+const CAMPOS_TEXTO = [
     'per_nombre','per_calle','per_puerta','per_piso','per_depto',
-    'per_barrio','per_localidad_id','per_codigo_postal','per_provincia_id',
+    'per_barrio','per_codigo_postal',
     'per_celular','per_telefono','per_email','per_alias_cbu','per_cbu',
-    'per_fecha_nac','per_tipo_identidad_id','per_tipo_persona_id'
+    'per_fecha_nac'
 ];
+const CAMPOS_SELECT = ['per_tipo_identidad_id','per_tipo_persona_id'];
+const CAMPOS_LOOKUP = [
+    {id:'per_provincia_id', txt:'per_provincia_txt', drop:'drop-provincia', tipo:'provincia'},
+    {id:'per_localidad_id', txt:'per_localidad_txt', drop:'drop-localidad', tipo:'localidad'},
+];
+
+let personaEncontrada = false;
 
 function mostrarErrorDni(msg) {
     const el = document.getElementById('msg-error-dni');
@@ -72,22 +80,84 @@ function mostrarOk(msg) {
 }
 
 function setLocked(locked) {
-    CAMPOS.forEach(id => {
+    personaEncontrada = locked;
+    CAMPOS_TEXTO.forEach(id => {
         const el = document.getElementById('f-' + id);
         if (el) { el.readOnly = locked; el.style.background = locked ? '#f5f5f5' : ''; }
     });
-    const btn = document.getElementById('btn-confirma-per');
-    btn.style.opacity = locked ? '.4' : '1';
-    btn.style.pointerEvents = locked ? 'none' : '';
+    CAMPOS_SELECT.forEach(id => {
+        const el = document.getElementById('f-' + id);
+        if (el) { el.disabled = locked; el.style.background = locked ? '#f5f5f5' : ''; }
+    });
+    CAMPOS_LOOKUP.forEach(cfg => {
+        const el = document.getElementById('f-' + cfg.txt);
+        if (el) { el.readOnly = locked; el.style.background = locked ? '#f5f5f5' : ''; }
+    });
 }
 
 function cargarPersona(persona) {
     document.getElementById('lbl-dni').textContent = persona.per_numero_identidad || '';
-    CAMPOS.forEach(id => {
+    CAMPOS_TEXTO.forEach(id => {
         const el = document.getElementById('f-' + id);
         if (el) el.value = persona[id] || '';
     });
+    CAMPOS_SELECT.forEach(id => {
+        const el = document.getElementById('f-' + id);
+        if (el && persona[id]) el.value = String(persona[id]);
+    });
+    const locHid = document.getElementById('f-per_localidad_id');
+    const locTxt = document.getElementById('f-per_localidad_txt');
+    if (locHid) locHid.value = persona.per_localidad_id || '';
+    if (locTxt) locTxt.value = persona._loc_desc || '';
+    const prvHid = document.getElementById('f-per_provincia_id');
+    const prvTxt = document.getElementById('f-per_provincia_txt');
+    if (prvHid) prvHid.value = persona.per_provincia_id || '';
+    if (prvTxt) prvTxt.value = persona._prv_desc || '';
 }
+
+function buildDropdown(dropId, items, onSelect) {
+    const drop = document.getElementById(dropId);
+    if (!items.length) { drop.style.display = 'none'; return; }
+    drop.innerHTML = items.map(item =>
+        `<div class="byl-dropdown-item" data-id="${item.id}">${item.nombre}</div>`
+    ).join('');
+    drop.querySelectorAll('.byl-dropdown-item').forEach(el => {
+        el.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            onSelect(this.dataset.id, this.textContent);
+            drop.style.display = 'none';
+        });
+    });
+    drop.style.display = '';
+}
+
+function setupLookup(cfg) {
+    const txtEl = document.getElementById('f-' + cfg.txt);
+    const hidEl = document.getElementById('f-' + cfg.id);
+
+    txtEl.addEventListener('input', async function() {
+        const q = this.value.trim();
+        hidEl.value = '';
+        if (q.length < 2) { document.getElementById(cfg.drop).style.display = 'none'; return; }
+        let url = URL_LOOKUP + '?tipo=' + cfg.tipo + '&q=' + encodeURIComponent(q);
+        if (cfg.tipo === 'localidad') {
+            const prvId = document.getElementById('f-per_provincia_id').value;
+            if (prvId) url += '&prov=' + prvId;
+        }
+        try {
+            const d = await (await fetch(url)).json();
+            if (d.ok) buildDropdown(cfg.drop, d.items, (id, nombre) => {
+                hidEl.value = id; txtEl.value = nombre;
+            });
+        } catch(e) {}
+    });
+
+    txtEl.addEventListener('blur', function() {
+        setTimeout(() => { document.getElementById(cfg.drop).style.display = 'none'; }, 150);
+    });
+}
+
+CAMPOS_LOOKUP.forEach(cfg => setupLookup(cfg));
 
 document.getElementById('btn-buscar-dni').addEventListener('click', async function() {
     mostrarErrorDni('');
@@ -118,10 +188,21 @@ document.getElementById('btn-anterior-dni').addEventListener('click', function()
 
 document.getElementById('btn-confirma-per').addEventListener('click', async function() {
     mostrarErrorPer('');
-    const data = {per_numero_identidad: document.getElementById('inp-dni').value.trim()};
-    CAMPOS.forEach(id => {
+    const data = {
+        per_numero_identidad: document.getElementById('inp-dni').value.trim(),
+        found: personaEncontrada
+    };
+    CAMPOS_TEXTO.forEach(id => {
         const el = document.getElementById('f-' + id);
         if (el) data[id] = el.value.trim();
+    });
+    CAMPOS_SELECT.forEach(id => {
+        const el = document.getElementById('f-' + id);
+        if (el) data[id] = el.value;
+    });
+    CAMPOS_LOOKUP.forEach(cfg => {
+        const el = document.getElementById('f-' + cfg.id);
+        if (el) data[cfg.id] = el.value;
     });
     try {
         const r = await fetch(URL_GUARDAR, {
@@ -131,8 +212,8 @@ document.getElementById('btn-confirma-per').addEventListener('click', async func
         });
         const d = await r.json();
         if (!d.ok) { mostrarErrorPer(d.error); return; }
-        mostrarOk('Datos guardados correctamente.');
-        setLocked(true);
+        mostrarOk('Datos confirmados.');
+        if (!personaEncontrada) setLocked(true);
     } catch(e) { mostrarErrorPer('Error de conexión'); }
 });
 </script>

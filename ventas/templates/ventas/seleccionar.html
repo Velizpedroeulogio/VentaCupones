@@ -46,21 +46,22 @@
     <!-- Resultado -->
     <div id="sec-resultado" style="display:none;">
         <div class="byl-card">
-            <div class="d-flex gap-2 mb-3 flex-wrap">
-                <form method="post" action="{% url 'ventas:confirmar_cupon' evn %}" style="display:inline;">
-                    {% csrf_token %}
-                    <input type="hidden" id="inp-sec" name="sec" value="">
-                    <button class="byl-btn" type="submit">Confirmo</button>
-                </form>
-                <button class="byl-btn" type="button" id="btn-anterior" style="opacity:.4;">Anterior</button>
-                <button class="byl-btn" type="button" id="btn-proximo-pag" style="opacity:.4;">Próximo</button>
-            </div>
             <div class="byl-section-title mb-2" id="titulo-cartones">Cartones</div>
             <div id="cartones-container"></div>
         </div>
     </div>
 
-    <div class="mt-3">
+    <!-- Formulario oculto para confirmar cupón -->
+    <form id="form-confirmar" method="post" action="{% url 'ventas:confirmar_cupon' evn %}" style="display:none;">
+        {% csrf_token %}
+        <input type="hidden" id="inp-sec" name="sec" value="">
+    </form>
+
+    <!-- Botones siempre visibles -->
+    <div class="d-flex gap-2 mt-3 flex-wrap">
+        <button class="byl-btn" type="button" id="btn-confirmar" style="display:none;">Confirma</button>
+        <button class="byl-btn" type="button" id="btn-anterior"  style="display:none;">Anterior</button>
+        <button class="byl-btn" type="button" id="btn-proximo-pag" style="display:none;">Próximo</button>
         <a class="byl-btn" href="{% url 'ventas:principal' evn %}">Volver</a>
     </div>
 
@@ -88,6 +89,9 @@ function actualizarPaginacion() {
 function renderCartones(sec, cartones) {
     document.getElementById('inp-sec').value = sec;
     document.getElementById('titulo-cartones').textContent = `Cartones del Cupón ${sec}`;
+    document.getElementById('btn-confirmar').style.display  = '';
+    document.getElementById('btn-anterior').style.display   = '';
+    document.getElementById('btn-proximo-pag').style.display = '';
     const cont = document.getElementById('cartones-container');
     if (!cartones.length) {
         cont.innerHTML = '<div class="byl-error">Sin cartones para este cupón.</div>';
@@ -101,6 +105,16 @@ function renderCartones(sec, cartones) {
     document.getElementById('sec-resultado').style.display = '';
     document.getElementById('sec-resultado').scrollIntoView({behavior: 'smooth'});
     actualizarPaginacion();
+}
+
+function limpiarResultado() {
+    document.getElementById('sec-resultado').style.display   = 'none';
+    document.getElementById('cartones-container').innerHTML   = '';
+    document.getElementById('btn-confirmar').style.display    = 'none';
+    document.getElementById('btn-anterior').style.display     = 'none';
+    document.getElementById('btn-proximo-pag').style.display  = 'none';
+    secuencias = [];
+    currentIdx = 0;
 }
 
 async function fetchSecuencias(numsPref) {
@@ -124,13 +138,6 @@ async function fetchSecuencias(numsPref) {
         mostrarError('Error de conexión');
         limpiarResultado();
     }
-}
-
-function limpiarResultado() {
-    document.getElementById('sec-resultado').style.display = 'none';
-    document.getElementById('cartones-container').innerHTML = '';
-    secuencias = [];
-    currentIdx = 0;
 }
 
 async function fetchCartones(sec) {
@@ -160,6 +167,10 @@ document.getElementById('btn-buscar').addEventListener('click', function() {
     if (nums.some(n => n < 1 || n > 90)) { mostrarError('Los números deben estar entre 1 y 90'); return; }
     if (new Set(nums).size !== nums.length) { mostrarError('Los números no deben repetirse'); return; }
     fetchSecuencias(nums);
+});
+
+document.getElementById('btn-confirmar').addEventListener('click', function() {
+    document.getElementById('form-confirmar').submit();
 });
 
 document.getElementById('btn-proximo-pag').addEventListener('click', function() {

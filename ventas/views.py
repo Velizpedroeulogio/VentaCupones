@@ -167,8 +167,10 @@ def datos_view(request, evn):
     if request.session.get("evn") != evn:
         return redirect("ventas:login", evn=evn)
     return render(request, "ventas/datos.html", {
-        "evn":        evn,
-        "img_evento": svc.get_imagen_evento(evn),
+        "evn":             evn,
+        "img_evento":      svc.get_imagen_evento(evn),
+        "tipos_identidad": svc.get_all_tipoidentidad(),
+        "tipos_persona":   svc.get_all_tipopersona(),
     })
 
 
@@ -187,6 +189,10 @@ def datos_buscar_api(request, evn):
         return JsonResponse({"ok": False, "error": "Ingrese el DNI"})
     persona = svc.get_persona(dni)
     if persona:
+        persona['_loc_desc'] = svc.get_nombre_by_id('app_core_localidad',  'loc_nombre',        persona.get('per_localidad_id'))
+        persona['_prv_desc'] = svc.get_nombre_by_id('app_core_provincia',  'pro_provincia',     persona.get('per_provincia_id'))
+        persona['_tid_desc'] = svc.get_nombre_by_id('app_gbl_tipoidentidad','tid_tipo_identidad',persona.get('per_tipo_identidad_id'))
+        persona['_tpe_desc'] = svc.get_nombre_by_id('app_gbl_tipopersona', 'tpe_tipo_persona',  persona.get('per_tipo_persona_id'))
         return JsonResponse({"ok": True, "found": True, "persona": persona})
     return JsonResponse({"ok": True, "found": False,
                          "persona": {"per_numero_identidad": str(dni)}})
@@ -202,6 +208,12 @@ def datos_guardar_api(request, evn):
         data = json.loads(request.body)
     except Exception:
         return JsonResponse({"ok": False, "error": "Datos inválidos"})
+
+    dni = data.get('per_numero_identidad')
+
+    if data.get('found'):
+        request.session['persona_dni'] = int(dni) if dni else None
+        return JsonResponse({"ok": True})
 
     if not data.get('per_nombre'):
         return JsonResponse({"ok": False, "error": "Nombre es requerido"})
@@ -222,9 +234,32 @@ def datos_guardar_api(request, evn):
 
     try:
         svc.save_persona(data)
+        request.session['persona_dni'] = int(dni) if dni else None
         return JsonResponse({"ok": True})
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)})
+
+
+def datos_lookup_api(request, evn):
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    tipo = request.GET.get("tipo", "")
+    q    = request.GET.get("q", "").strip()
+    prov = request.GET.get("prov", "").strip()
+
+    if tipo == "tipoidentidad":
+        return JsonResponse({"ok": True, "items": svc.get_all_tipoidentidad()})
+    elif tipo == "tipopersona":
+        return JsonResponse({"ok": True, "items": svc.get_all_tipopersona()})
+    elif tipo == "provincia":
+        if len(q) < 2:
+            return JsonResponse({"ok": True, "items": []})
+        return JsonResponse({"ok": True, "items": svc.get_lookup_provincia(q)})
+    elif tipo == "localidad":
+        if len(q) < 2:
+            return JsonResponse({"ok": True, "items": []})
+        return JsonResponse({"ok": True, "items": svc.get_lookup_localidad(q, prov or None)})
+    return JsonResponse({"ok": False, "error": "Tipo inválido"})
 
 
 def confirmar_cupon(request, evn):

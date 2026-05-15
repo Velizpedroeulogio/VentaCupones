@@ -419,3 +419,52 @@ def save_persona(data):
             )
         )
         return cur.rowcount > 0
+
+
+# ------------------------------------------------------------------ LOOKUPS FK
+def get_lookup_provincia(q):
+    rows = _fetchall(
+        'SELECT id, "pro_provincia" FROM "app_core_provincia"'
+        ' WHERE UPPER("pro_provincia") LIKE UPPER(%s)'
+        ' ORDER BY "pro_provincia" LIMIT 10',
+        (f'%{q}%',)
+    )
+    return [{"id": r[0], "nombre": str(r[1])} for r in rows]
+
+
+def get_lookup_localidad(q, provincia_id=None):
+    params = [f'%{q}%']
+    sql = ('SELECT id, "loc_nombre" FROM "app_core_localidad"'
+           ' WHERE UPPER("loc_nombre") LIKE UPPER(%s)')
+    if provincia_id:
+        sql += ' AND "loc_provincia_id" = %s'
+        params.append(int(provincia_id))
+    sql += ' ORDER BY "loc_nombre" LIMIT 10'
+    rows = _fetchall(sql, params)
+    return [{"id": r[0], "nombre": str(r[1])} for r in rows]
+
+
+def get_all_tipoidentidad():
+    rows = _fetchall(
+        'SELECT id, "tid_tipo_identidad" FROM "app_gbl_tipoidentidad"'
+        ' ORDER BY "tid_tipo_identidad"'
+    )
+    return [{"id": r[0], "nombre": str(r[1])} for r in rows]
+
+
+def get_all_tipopersona():
+    rows = _fetchall(
+        'SELECT id, "tpe_tipo_persona" FROM "app_gbl_tipopersona"'
+        ' ORDER BY "tpe_tipo_persona"'
+    )
+    return [{"id": r[0], "nombre": str(r[1])} for r in rows]
+
+
+def get_nombre_by_id(tabla, col, id_val):
+    if not id_val:
+        return ''
+    try:
+        row = _fetchone(f'SELECT "{col}" FROM "{tabla}" WHERE id = %s', (int(id_val),))
+        return str(row[0]) if row else ''
+    except Exception:
+        return ''

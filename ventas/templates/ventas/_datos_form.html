@@ -42,16 +42,20 @@
     </div>
 </div>
 
-<!-- Localidad / Provincia -->
-<div class="d-flex gap-2 mb-2 flex-wrap">
-    <div class="byl-field" style="flex:2 1 120px;">
-        <label for="f-per_localidad_id">Localidad ID</label>
-        <input type="number" id="f-per_localidad_id" min="1" placeholder="ID">
-    </div>
-    <div class="byl-field" style="flex:1 1 80px;">
-        <label for="f-per_provincia_id">Provincia ID</label>
-        <input type="number" id="f-per_provincia_id" min="1" placeholder="ID">
-    </div>
+<!-- Provincia (lookup) -->
+<div class="byl-field mb-2" style="position:relative;">
+    <label for="f-per_provincia_txt">Provincia</label>
+    <input type="text" id="f-per_provincia_txt" placeholder="Buscar provincia..." autocomplete="off">
+    <input type="hidden" id="f-per_provincia_id">
+    <div id="drop-provincia" class="byl-dropdown" style="display:none;"></div>
+</div>
+
+<!-- Localidad (lookup) -->
+<div class="byl-field mb-2" style="position:relative;">
+    <label for="f-per_localidad_txt">Localidad</label>
+    <input type="text" id="f-per_localidad_txt" placeholder="Buscar localidad..." autocomplete="off">
+    <input type="hidden" id="f-per_localidad_id">
+    <div id="drop-localidad" class="byl-dropdown" style="display:none;"></div>
 </div>
 
 <!-- Contacto -->
@@ -90,14 +94,24 @@
     <input type="date" id="f-per_fecha_nac">
 </div>
 
-<!-- Tipo identidad / Tipo persona -->
+<!-- Tipo Identidad / Tipo Persona -->
 <div class="d-flex gap-2 mb-2 flex-wrap">
-    <div class="byl-field" style="flex:1 1 100px;">
-        <label for="f-per_tipo_identidad_id">Tipo Identidad ID</label>
-        <input type="number" id="f-per_tipo_identidad_id" min="1" placeholder="ID">
+    <div class="byl-field" style="flex:1 1 140px;">
+        <label for="f-per_tipo_identidad_id">Tipo Identidad</label>
+        <select id="f-per_tipo_identidad_id">
+            <option value="">-- Seleccione --</option>
+            {% for t in tipos_identidad %}
+            <option value="{{ t.id }}">{{ t.nombre }}</option>
+            {% endfor %}
+        </select>
     </div>
-    <div class="byl-field" style="flex:1 1 100px;">
-        <label for="f-per_tipo_persona_id">Tipo Persona ID</label>
-        <input type="number" id="f-per_tipo_persona_id" min="1" placeholder="ID">
+    <div class="byl-field" style="flex:1 1 140px;">
+        <label for="f-per_tipo_persona_id">Tipo Persona</label>
+        <select id="f-per_tipo_persona_id">
+            <option value="">-- Seleccione --</option>
+            {% for t in tipos_persona %}
+            <option value="{{ t.id }}">{{ t.nombre }}</option>
+            {% endfor %}
+        </select>
     </div>
 </div>
