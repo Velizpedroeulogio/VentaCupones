@@ -5,18 +5,46 @@
 <h6 class="mb-2">Índices</h6>
 
 <form method="get" class="row g-2 mb-3 align-items-end">
+
     <div class="col-auto">
         <label class="form-label mb-0" style="font-size:11px;">Esquema</label>
-        <input type="text" name="esquema" class="form-control form-control-sm" value="{{ esquema }}">
+        <div class="input-group input-group-sm">
+            <select name="esquema_op" class="form-select form-select-sm" style="max-width:50px;">
+                <option value="ct" {% if esquema_op == 'ct' %}selected{% endif %}>∋</option>
+                <option value="nc" {% if esquema_op == 'nc' %}selected{% endif %}>∌</option>
+                <option value="eq" {% if esquema_op == 'eq' %}selected{% endif %}>=</option>
+                <option value="ne" {% if esquema_op == 'ne' %}selected{% endif %}>≠</option>
+            </select>
+            <input type="text" name="esquema" class="form-control form-control-sm" value="{{ esquema }}">
+        </div>
     </div>
+
     <div class="col-auto">
-        <label class="form-label mb-0" style="font-size:11px;">Tabla (contiene)</label>
-        <input type="text" name="tabla" class="form-control form-control-sm" value="{{ tabla }}">
+        <label class="form-label mb-0" style="font-size:11px;">Tabla</label>
+        <div class="input-group input-group-sm">
+            <select name="tabla_op" class="form-select form-select-sm" style="max-width:50px;">
+                <option value="ct" {% if tabla_op == 'ct' %}selected{% endif %}>∋</option>
+                <option value="nc" {% if tabla_op == 'nc' %}selected{% endif %}>∌</option>
+                <option value="eq" {% if tabla_op == 'eq' %}selected{% endif %}>=</option>
+                <option value="ne" {% if tabla_op == 'ne' %}selected{% endif %}>≠</option>
+            </select>
+            <input type="text" name="tabla" class="form-control form-control-sm" value="{{ tabla }}">
+        </div>
     </div>
+
     <div class="col-auto">
-        <label class="form-label mb-0" style="font-size:11px;">Índice (contiene)</label>
-        <input type="text" name="indice" class="form-control form-control-sm" value="{{ indice }}">
+        <label class="form-label mb-0" style="font-size:11px;">Índice</label>
+        <div class="input-group input-group-sm">
+            <select name="indice_op" class="form-select form-select-sm" style="max-width:50px;">
+                <option value="ct" {% if indice_op == 'ct' %}selected{% endif %}>∋</option>
+                <option value="nc" {% if indice_op == 'nc' %}selected{% endif %}>∌</option>
+                <option value="eq" {% if indice_op == 'eq' %}selected{% endif %}>=</option>
+                <option value="ne" {% if indice_op == 'ne' %}selected{% endif %}>≠</option>
+            </select>
+            <input type="text" name="indice" class="form-control form-control-sm" value="{{ indice }}">
+        </div>
     </div>
+
     <div class="col-auto">
         <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
         <a href="/mdl/indices/" class="btn btn-outline-secondary btn-sm">Limpiar</a>

@@ -5,18 +5,46 @@
 <h6 class="mb-2">Tablas</h6>
 
 <form method="get" class="row g-2 mb-3 align-items-end">
+
     <div class="col-auto">
         <label class="form-label mb-0" style="font-size:11px;">Catálogo</label>
-        <input type="text" name="catalogo" class="form-control form-control-sm" value="{{ catalogo }}">
+        <div class="input-group input-group-sm">
+            <select name="catalogo_op" class="form-select form-select-sm" style="max-width:50px;">
+                <option value="ct" {% if catalogo_op == 'ct' %}selected{% endif %}>∋</option>
+                <option value="nc" {% if catalogo_op == 'nc' %}selected{% endif %}>∌</option>
+                <option value="eq" {% if catalogo_op == 'eq' %}selected{% endif %}>=</option>
+                <option value="ne" {% if catalogo_op == 'ne' %}selected{% endif %}>≠</option>
+            </select>
+            <input type="text" name="catalogo" class="form-control form-control-sm" value="{{ catalogo }}">
+        </div>
     </div>
+
     <div class="col-auto">
         <label class="form-label mb-0" style="font-size:11px;">Esquema</label>
-        <input type="text" name="esquema" class="form-control form-control-sm" value="{{ esquema }}">
+        <div class="input-group input-group-sm">
+            <select name="esquema_op" class="form-select form-select-sm" style="max-width:50px;">
+                <option value="ct" {% if esquema_op == 'ct' %}selected{% endif %}>∋</option>
+                <option value="nc" {% if esquema_op == 'nc' %}selected{% endif %}>∌</option>
+                <option value="eq" {% if esquema_op == 'eq' %}selected{% endif %}>=</option>
+                <option value="ne" {% if esquema_op == 'ne' %}selected{% endif %}>≠</option>
+            </select>
+            <input type="text" name="esquema" class="form-control form-control-sm" value="{{ esquema }}">
+        </div>
     </div>
+
     <div class="col-auto">
-        <label class="form-label mb-0" style="font-size:11px;">Tabla (contiene)</label>
-        <input type="text" name="tabla" class="form-control form-control-sm" value="{{ tabla }}">
+        <label class="form-label mb-0" style="font-size:11px;">Tabla</label>
+        <div class="input-group input-group-sm">
+            <select name="tabla_op" class="form-select form-select-sm" style="max-width:50px;">
+                <option value="ct" {% if tabla_op == 'ct' %}selected{% endif %}>∋</option>
+                <option value="nc" {% if tabla_op == 'nc' %}selected{% endif %}>∌</option>
+                <option value="eq" {% if tabla_op == 'eq' %}selected{% endif %}>=</option>
+                <option value="ne" {% if tabla_op == 'ne' %}selected{% endif %}>≠</option>
+            </select>
+            <input type="text" name="tabla" class="form-control form-control-sm" value="{{ tabla }}">
+        </div>
     </div>
+
     <div class="col-auto">
         <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
         <a href="/mdl/" class="btn btn-outline-secondary btn-sm">Limpiar</a>
@@ -29,7 +57,7 @@
         <tr>
             <th><a href="{{ surls.table_catalog }}">Catálogo{% if sort == 'table_catalog' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
             <th><a href="{{ surls.table_schema }}">Esquema{% if sort == 'table_schema' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
-            <th><a href="{{ surls.table_name }}">Tabla{% if sort == 'table_name' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
+            <th><a href="{{ surls.table_name %}">Tabla{% if sort == 'table_name' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
             <th><a href="{{ surls.table_type }}">Tipo{% if sort == 'table_type' %} {% if dir == 'asc' %}▲{% else %}▼{% endif %}{% endif %}</a></th>
             <th>Acciones</th>
         </tr>
@@ -42,8 +70,8 @@
             <td>{{ r.2 }}</td>
             <td>{{ r.3 }}</td>
             <td>
-                <a class="btn btn-outline-primary btn-sm py-0" href="/mdl/columnas/?esquema={{ r.1 }}&tabla={{ r.2 }}">Columnas</a>
-                <a class="btn btn-outline-secondary btn-sm py-0" href="/mdl/indices/?esquema={{ r.1 }}&tabla={{ r.2 }}">Índices</a>
+                <a class="btn btn-outline-primary btn-sm py-0" href="/mdl/columnas/?esquema={{ r.1 }}&esquema_op=eq&tabla={{ r.2 }}&tabla_op=eq">Columnas</a>
+                <a class="btn btn-outline-secondary btn-sm py-0" href="/mdl/indices/?esquema={{ r.1 }}&tabla={{ r.2 }}&tabla_op=eq">Índices</a>
             </td>
         </tr>
         {% empty %}
