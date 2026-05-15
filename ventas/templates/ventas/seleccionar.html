@@ -104,7 +104,7 @@ function renderCartones(sec, cartones) {
     } else {
         cont.innerHTML = cartones.map((c, i) =>
             `<div style="font-size:13px;margin-bottom:6px;"><strong style="margin-right:8px;">${i + 1}:</strong>${
-                (c.lis || []).map(n => `<span style="display:inline-block;border:1px solid #aaa;border-radius:3px;padding:1px 3px;margin-right:3px;min-width:1.5em;text-align:center;">${n}</span>`).join('')
+                (c.lis || []).map(n => `<span style="display:inline-block;border:1px solid #aaa;border-radius:3px;padding:1px 3px;margin-right:3px;min-width:1.5em;text-align:center;font-family:'Courier New',monospace;">${n}</span>`).join('')
             }</div>`
         ).join('');
     }
