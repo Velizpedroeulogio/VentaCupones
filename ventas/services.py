@@ -332,10 +332,7 @@ def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
             "   AND \"EVNC_EST\" = 'P'"
             ' ORDER BY "EVNC_SEC" LIMIT 5'
         )
-    print(f"[DEBUG SQL] {sql}", flush=True)
-    print(f"[DEBUG PARAMS] {params}", flush=True)
     rows = _fetchall(sql, params)
-    print(f"[DEBUG ROWS] {rows}", flush=True)
     return [int(r[0]) for r in rows]
 
 
@@ -358,3 +355,67 @@ def get_publicaciones(evn):
         ]
     except Exception:
         return []
+
+
+# ------------------------------------------------------------------ PERSONA
+_PERSONA_KEYS = [
+    'id', 'per_numero_identidad', 'per_fecha_nac', 'per_nombre',
+    'per_calle', 'per_puerta', 'per_piso', 'per_depto', 'per_barrio',
+    'per_codigo_postal', 'per_telefono', 'per_celular', 'per_email',
+    'per_localidad_id', 'per_provincia_id', 'per_tipo_identidad_id',
+    'per_tipo_persona_id', 'per_alias_cbu', 'per_cbu',
+]
+
+
+def get_persona(numero_identidad):
+    row = _fetchone(
+        'SELECT id, per_numero_identidad, per_fecha_nac, per_nombre,'
+        '  per_calle, per_puerta, per_piso, per_depto, per_barrio,'
+        '  per_codigo_postal, per_telefono, per_celular, per_email,'
+        '  per_localidad_id, per_provincia_id, per_tipo_identidad_id,'
+        '  per_tipo_persona_id, per_alias_cbu, per_cbu'
+        ' FROM "app_gbl_persona"'
+        ' WHERE "per_numero_identidad" = %s',
+        (int(numero_identidad),)
+    )
+    if not row:
+        return None
+    return {k: (str(v) if v is not None else '') for k, v in zip(_PERSONA_KEYS, row)}
+
+
+def save_persona(data):
+    def _i(v):
+        try: return int(v) if str(v).strip() else None
+        except: return None
+
+    with connection.cursor() as cur:
+        cur.execute(
+            'INSERT INTO "app_gbl_persona"'
+            ' ("per_numero_identidad","per_fecha_nac","per_nombre",'
+            '  "per_calle","per_puerta","per_piso","per_depto","per_barrio",'
+            '  "per_codigo_postal","per_telefono","per_celular","per_email",'
+            '  "per_localidad_id","per_provincia_id","per_tipo_identidad_id",'
+            '  "per_tipo_persona_id","per_alias_cbu","per_cbu")'
+            ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+            (
+                int(data['per_numero_identidad']),
+                data.get('per_fecha_nac') or None,
+                data['per_nombre'],
+                data.get('per_calle') or None,
+                data.get('per_puerta') or None,
+                data.get('per_piso') or None,
+                data.get('per_depto') or None,
+                data.get('per_barrio') or None,
+                data.get('per_codigo_postal') or None,
+                data.get('per_telefono') or None,
+                data.get('per_celular') or None,
+                data.get('per_email') or None,
+                _i(data.get('per_localidad_id')),
+                _i(data.get('per_provincia_id')),
+                int(data['per_tipo_identidad_id']),
+                int(data['per_tipo_persona_id']),
+                data.get('per_alias_cbu') or None,
+                data.get('per_cbu') or None,
+            )
+        )
+        return cur.rowcount > 0

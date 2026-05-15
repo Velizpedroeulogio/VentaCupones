@@ -163,6 +163,70 @@ def cartones_api(request, evn):
     return JsonResponse({"ok": True, "sec": sec, "cartones": cartones})
 
 
+def datos_view(request, evn):
+    if request.session.get("evn") != evn:
+        return redirect("ventas:login", evn=evn)
+    return render(request, "ventas/datos.html", {
+        "evn":        evn,
+        "img_evento": svc.get_imagen_evento(evn),
+    })
+
+
+@csrf_exempt
+def datos_buscar_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    try:
+        body = json.loads(request.body)
+        dni = int(body.get("dni", 0))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "DNI inválido"})
+    if not dni:
+        return JsonResponse({"ok": False, "error": "Ingrese el DNI"})
+    persona = svc.get_persona(dni)
+    if persona:
+        return JsonResponse({"ok": True, "found": True, "persona": persona})
+    return JsonResponse({"ok": True, "found": False,
+                         "persona": {"per_numero_identidad": str(dni)}})
+
+
+@csrf_exempt
+def datos_guardar_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Datos inválidos"})
+
+    if not data.get('per_nombre'):
+        return JsonResponse({"ok": False, "error": "Nombre es requerido"})
+    if not data.get('per_calle'):
+        return JsonResponse({"ok": False, "error": "Calle es requerida"})
+    if not data.get('per_puerta'):
+        return JsonResponse({"ok": False, "error": "Puerta es requerida"})
+    if not data.get('per_localidad_id'):
+        return JsonResponse({"ok": False, "error": "Localidad es requerida"})
+    if not data.get('per_celular') and not data.get('per_email'):
+        return JsonResponse({"ok": False, "error": "Celular o eMail son requeridos"})
+    if not data.get('per_tipo_identidad_id'):
+        return JsonResponse({"ok": False, "error": "Tipo de identidad es requerido"})
+    if not data.get('per_tipo_persona_id'):
+        return JsonResponse({"ok": False, "error": "Tipo de persona es requerido"})
+    if not data.get('per_fecha_nac'):
+        return JsonResponse({"ok": False, "error": "Fecha de nacimiento es requerida"})
+
+    try:
+        svc.save_persona(data)
+        return JsonResponse({"ok": True})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)})
+
+
 def confirmar_cupon(request, evn):
     if request.method != "POST":
         return redirect("ventas:seleccionar", evn=evn)

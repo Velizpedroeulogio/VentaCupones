@@ -14,4 +14,7 @@ urlpatterns = [
     path("<int:evn>/seleccionar/proximo/", views.proximo_api,    name="proximo_api"),
     path("<int:evn>/seleccionar/confirmar/", views.confirmar_cupon, name="confirmar_cupon"),
     path("<int:evn>/seleccionar/cartones/",  views.cartones_api,    name="cartones_api"),
+    path("<int:evn>/datos/",                 views.datos_view,       name="datos"),
+    path("<int:evn>/datos/buscar/",          views.datos_buscar_api, name="datos_buscar"),
+    path("<int:evn>/datos/guardar/",         views.datos_guardar_api, name="datos_guardar"),
 ]

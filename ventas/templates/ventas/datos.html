@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Datos del Comprador{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <div class="byl-title mt-2 mb-3">Venta de Cupones</div>
+
+    <!-- Sección 1: Búsqueda por DNI -->
+    <div class="byl-card" id="sec-dni">
+        <div class="byl-section-title mb-3">Número Documento Identidad</div>
+        <div class="d-flex gap-2 align-items-center">
+            <input type="number" id="inp-dni" min="1"
+                   style="width:150px;text-align:center;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;"
+                   placeholder="DNI">
+            <button class="byl-btn" type="button" id="btn-buscar-dni">Confirma</button>
+        </div>
+        <div id="msg-error-dni" class="byl-error mt-2" style="display:none;"></div>
+    </div>
+
+    <!-- Sección 2: Formulario de persona -->
+    <div id="sec-persona" style="display:none;">
+        <div class="byl-card">
+            <div id="msg-error-per" class="byl-error mb-2" style="display:none;"></div>
+            <div id="msg-ok-per" style="display:none;color:green;margin-bottom:8px;font-size:13px;"></div>
+
+            {% include "ventas/_datos_form.html" %}
+
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+                <button class="byl-btn" type="button" id="btn-anterior-dni">Anterior</button>
+                <button class="byl-btn" type="button" id="btn-confirma-per">Confirma</button>
+                <a class="byl-btn" href="{% url 'ventas:principal' evn %}">Volver</a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const URL_BUSCAR  = "{% url 'ventas:datos_buscar' evn %}";
+const URL_GUARDAR = "{% url 'ventas:datos_guardar' evn %}";
+const CSRF = "{{ csrf_token }}";
+
+const CAMPOS = [
+    'per_nombre','per_calle','per_puerta','per_piso','per_depto',
+    'per_barrio','per_localidad_id','per_codigo_postal','per_provincia_id',
+    'per_celular','per_telefono','per_email','per_alias_cbu','per_cbu',
+    'per_fecha_nac','per_tipo_identidad_id','per_tipo_persona_id'
+];
+
+function mostrarErrorDni(msg) {
+    const el = document.getElementById('msg-error-dni');
+    el.textContent = msg; el.style.display = msg ? '' : 'none';
+}
+
+function mostrarErrorPer(msg) {
+    const el = document.getElementById('msg-error-per');
+    el.textContent = msg; el.style.display = msg ? '' : 'none';
+    document.getElementById('msg-ok-per').style.display = 'none';
+}
+
+function mostrarOk(msg) {
+    const el = document.getElementById('msg-ok-per');
+    el.textContent = msg; el.style.display = '';
+    document.getElementById('msg-error-per').style.display = 'none';
+}
+
+function setLocked(locked) {
+    CAMPOS.forEach(id => {
+        const el = document.getElementById('f-' + id);
+        if (el) { el.readOnly = locked; el.style.background = locked ? '#f5f5f5' : ''; }
+    });
+    const btn = document.getElementById('btn-confirma-per');
+    btn.style.opacity = locked ? '.4' : '1';
+    btn.style.pointerEvents = locked ? 'none' : '';
+}
+
+function cargarPersona(persona) {
+    document.getElementById('lbl-dni').textContent = persona.per_numero_identidad || '';
+    CAMPOS.forEach(id => {
+        const el = document.getElementById('f-' + id);
+        if (el) el.value = persona[id] || '';
+    });
+}
+
+document.getElementById('btn-buscar-dni').addEventListener('click', async function() {
+    mostrarErrorDni('');
+    const dni = document.getElementById('inp-dni').value.trim();
+    if (!dni) { mostrarErrorDni('Ingrese el DNI'); return; }
+    try {
+        const r = await fetch(URL_BUSCAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({dni: parseInt(dni)})
+        });
+        const d = await r.json();
+        if (!d.ok) { mostrarErrorDni(d.error); return; }
+        cargarPersona(d.persona);
+        setLocked(d.found);
+        document.getElementById('sec-dni').style.display = 'none';
+        document.getElementById('sec-persona').style.display = '';
+        mostrarErrorPer('');
+        if (d.found) mostrarOk('Registro encontrado.');
+    } catch(e) { mostrarErrorDni('Error de conexión'); }
+});
+
+document.getElementById('btn-anterior-dni').addEventListener('click', function() {
+    document.getElementById('sec-persona').style.display = 'none';
+    document.getElementById('sec-dni').style.display = '';
+    mostrarErrorDni('');
+});
+
+document.getElementById('btn-confirma-per').addEventListener('click', async function() {
+    mostrarErrorPer('');
+    const data = {per_numero_identidad: document.getElementById('inp-dni').value.trim()};
+    CAMPOS.forEach(id => {
+        const el = document.getElementById('f-' + id);
+        if (el) data[id] = el.value.trim();
+    });
+    try {
+        const r = await fetch(URL_GUARDAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const d = await r.json();
+        if (!d.ok) { mostrarErrorPer(d.error); return; }
+        mostrarOk('Datos guardados correctamente.');
+        setLocked(true);
+    } catch(e) { mostrarErrorPer('Error de conexión'); }
+});
+</script>
+{% endblock %}
