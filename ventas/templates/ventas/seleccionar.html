@@ -88,7 +88,7 @@ function actualizarPaginacion() {
 
 function renderCartones(sec, cartones) {
     document.getElementById('inp-sec').value = sec;
-    document.getElementById('titulo-cartones').textContent = `Cartones del Cupón ${sec}`;
+    document.getElementById('titulo-cartones').textContent = `Cartones del Cupón ${String(sec).padStart(6, '0')}`;
     document.getElementById('btn-confirmar').style.display  = '';
     document.getElementById('btn-anterior').style.display   = '';
     document.getElementById('btn-proximo-pag').style.display = '';
