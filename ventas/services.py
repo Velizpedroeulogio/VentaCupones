@@ -344,12 +344,22 @@ def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
     return [int(r[0]) for r in rows]
 
 
-def reservar_cupon(evn, sec):
+def reservar_cupon(evn, sec, usuario):
     with connection.cursor() as cur:
         cur.execute(
-            'UPDATE "EVNC_CAR" SET "EVNC_EST" = %s, "EVNC_TIME" = NOW()'
+            'UPDATE "EVNC_CAR" SET "EVNC_EST" = %s, "EVNC_VEN" = %s, "EVNC_TIME" = NOW()'
             ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" = %s AND "EVNC_EST" = %s',
-            ('X', evn, int(sec), 'P')
+            ('X', str(usuario or ''), evn, int(sec), 'P')
+        )
+        return cur.rowcount > 0
+
+
+def vender_cupon(evn, sec, usuario):
+    with connection.cursor() as cur:
+        cur.execute(
+            'UPDATE "EVNC_CAR" SET "EVNC_EST" = %s, "EVNC_VEN" = %s, "EVNC_TIME" = NOW()'
+            ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" = %s',
+            ('V', str(usuario or ''), evn, int(sec))
         )
         return cur.rowcount > 0
 

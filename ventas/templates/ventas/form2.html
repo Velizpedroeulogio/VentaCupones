@@ -43,15 +43,31 @@
     </div>
     {% endif %}
 
-    <!-- ABG / Ayuda -->
+    <!-- Estado de venta + Botones -->
     <div class="byl-card">
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-wrap mb-2">
             <a class="byl-btn" href="{% url 'ventas:seleccionar' evn %}">Seleccionar</a>
             <a class="byl-btn" href="{% url 'ventas:datos' evn %}">Datos</a>
-            <button class="byl-btn" type="button">Confirmar</button>
+            <button class="byl-btn" type="button" id="btn-confirmar-venta">Confirmar</button>
             <a class="byl-btn" href="{% url 'ventas:ayuda' evn 'SOMOS' %}">ABG</a>
             <a class="byl-btn" href="{% url 'ventas:ayuda' evn 'HELP1' %}">Ayuda</a>
         </div>
+        <div style="font-size:13px;color:#555;">
+            <span>Cupón: </span>
+            {% if cupon_sec %}
+            <strong style="color:var(--byl-accent);">{{ cupon_sec }}</strong>
+            {% else %}
+            <span style="color:#aaa;">Sin seleccionar</span>
+            {% endif %}
+            &nbsp;&nbsp;
+            <span>Comprador: </span>
+            {% if persona_dni %}
+            <strong style="color:var(--byl-accent);">DNI {{ persona_dni }}</strong>
+            {% else %}
+            <span style="color:#aaa;">Sin datos</span>
+            {% endif %}
+        </div>
+        <div id="msg-confirmar" class="mt-2" style="display:none;font-size:13px;"></div>
     </div>
 
     <!-- Publicaciones -->
@@ -84,4 +100,41 @@
     {% endif %}
 
 </div>
+
+<script>
+const CSRF = "{{ csrf_token }}";
+const URL_CONFIRMAR_VENTA = "{% url 'ventas:confirmar_venta' evn %}";
+const URL_PRINCIPAL = "{% url 'ventas:principal' evn %}";
+
+document.getElementById('btn-confirmar-venta').addEventListener('click', async function() {
+    const btn = this;
+    const msg = document.getElementById('msg-confirmar');
+    btn.disabled = true;
+    msg.style.display = 'none';
+    try {
+        const r = await fetch(URL_CONFIRMAR_VENTA, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        });
+        const d = await r.json();
+        if (d.ok) {
+            msg.style.color = 'green';
+            msg.textContent = '✓ Venta confirmada exitosamente.';
+            msg.style.display = '';
+            setTimeout(() => window.location.href = URL_PRINCIPAL, 1500);
+        } else {
+            msg.style.color = 'red';
+            msg.textContent = d.error || 'Error al confirmar la venta.';
+            msg.style.display = '';
+            btn.disabled = false;
+        }
+    } catch(e) {
+        msg.style.color = 'red';
+        msg.textContent = 'Error de conexión.';
+        msg.style.display = '';
+        btn.disabled = false;
+    }
+});
+</script>
 {% endblock %}

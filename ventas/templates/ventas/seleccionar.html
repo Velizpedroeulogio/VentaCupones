@@ -155,6 +155,14 @@ async function fetchCartones(sec) {
     }
 }
 
+function actualizarBtnProximo() {
+    const tienePreferidos = [...document.querySelectorAll('.num-pref')].some(i => i.value.trim() !== '');
+    document.getElementById('btn-proximo').disabled = tienePreferidos;
+    document.getElementById('btn-proximo').style.opacity = tienePreferidos ? '.4' : '1';
+}
+
+document.querySelectorAll('.num-pref').forEach(inp => inp.addEventListener('input', actualizarBtnProximo));
+
 document.getElementById('btn-proximo').addEventListener('click', () => fetchSecuencias(null));
 
 document.getElementById('btn-buscar').addEventListener('click', function() {

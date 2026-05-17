@@ -59,6 +59,9 @@ def principal(request, evn):
             for n, p in sorted(pvt["precios"].items())
         ]
 
+    cupon_sec   = request.session.get("cupon_sec")
+    persona_dni = request.session.get("persona_dni")
+
     return render(request, "ventas/form2.html", {
         "evn":           evn,
         "evento_desc":   svc.get_evento(evn),
@@ -68,6 +71,8 @@ def principal(request, evn):
         "precios_lista": precios_lista,
         "fechas":        fechas,
         "publicaciones": svc.get_publicaciones(evn),
+        "cupon_sec":     str(cupon_sec).zfill(6) if cupon_sec else "",
+        "persona_dni":   str(persona_dni) if persona_dni else "",
     })
 
 
@@ -240,6 +245,31 @@ def datos_guardar_api(request, evn):
         return JsonResponse({"ok": False, "error": str(e)})
 
 
+@csrf_exempt
+def confirmar_venta_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+
+    cupon_sec   = request.session.get("cupon_sec")
+    persona_dni = request.session.get("persona_dni")
+
+    if not cupon_sec:
+        return JsonResponse({"ok": False, "error": "Falta seleccionar el cupón"})
+    if not persona_dni:
+        return JsonResponse({"ok": False, "error": "Falta ingresar los datos del comprador"})
+
+    usuario = request.session.get("usuario", "")
+    ok = svc.vender_cupon(evn, int(cupon_sec), usuario)
+    if not ok:
+        return JsonResponse({"ok": False, "error": "No se pudo confirmar la venta. El cupón ya no está disponible."})
+
+    request.session.pop("cupon_sec", None)
+    request.session.pop("persona_dni", None)
+    return JsonResponse({"ok": True})
+
+
 def datos_lookup_api(request, evn):
     if request.session.get("evn") != evn:
         return JsonResponse({"ok": False, "error": "Sesión inválida"})
@@ -275,7 +305,8 @@ def confirmar_cupon(request, evn):
         return JsonResponse({"ok": False, "error": "Datos inválidos"}, status=400)
     if not sec:
         return JsonResponse({"ok": False, "error": "Cupón inválido"})
-    ok = svc.reservar_cupon(evn, sec)
+    usuario = request.session.get("usuario", "")
+    ok = svc.reservar_cupon(evn, sec, usuario)
     if not ok:
         return JsonResponse({"ok": False, "concurrencia": True,
                              "error": "Debe buscar nuevamente por una concurrencia operativa"})
