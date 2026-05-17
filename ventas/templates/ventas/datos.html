@@ -134,10 +134,12 @@ function buildDropdown(dropId, items, onSelect) {
 function setupLookup(cfg) {
     const txtEl = document.getElementById('f-' + cfg.txt);
     const hidEl = document.getElementById('f-' + cfg.id);
+    let lastItems = [];
 
     txtEl.addEventListener('input', async function() {
         const q = this.value.trim();
         hidEl.value = '';
+        lastItems = [];
         if (q.length < 2) { document.getElementById(cfg.drop).style.display = 'none'; return; }
         let url = URL_LOOKUP + '?tipo=' + cfg.tipo + '&q=' + encodeURIComponent(q);
         if (cfg.tipo === 'localidad') {
@@ -146,14 +148,35 @@ function setupLookup(cfg) {
         }
         try {
             const d = await (await fetch(url)).json();
-            if (d.ok) buildDropdown(cfg.drop, d.items, (id, nombre) => {
-                hidEl.value = id; txtEl.value = nombre;
-            });
+            if (d.ok) {
+                lastItems = d.items;
+                if (d.items.length === 1) {
+                    hidEl.value = d.items[0].id;
+                    txtEl.value = d.items[0].nombre;
+                    document.getElementById(cfg.drop).style.display = 'none';
+                } else {
+                    buildDropdown(cfg.drop, d.items, (id, nombre) => {
+                        hidEl.value = id; txtEl.value = nombre;
+                    });
+                }
+            }
         } catch(e) {}
     });
 
     txtEl.addEventListener('blur', function() {
-        setTimeout(() => { document.getElementById(cfg.drop).style.display = 'none'; }, 150);
+        const textoActual = this.value.trim();
+        setTimeout(() => {
+            if (textoActual && !hidEl.value && lastItems.length) {
+                const q = textoActual.toLowerCase();
+                const exacto = lastItems.find(i => i.nombre.toLowerCase() === q);
+                if (exacto) {
+                    hidEl.value = exacto.id; txtEl.value = exacto.nombre;
+                } else if (lastItems.length === 1) {
+                    hidEl.value = lastItems[0].id; txtEl.value = lastItems[0].nombre;
+                }
+            }
+            document.getElementById(cfg.drop).style.display = 'none';
+        }, 150);
     });
 }
 
