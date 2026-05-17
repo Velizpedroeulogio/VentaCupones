@@ -114,10 +114,18 @@ def seleccionar_view(request, evn):
     cantidades = []
     if pvt:
         cantidades = sorted(i for i in pvt["precios"] if i in pvt["rangos"])
+
+    cupon_sec   = request.session.get("cupon_sec")
+    nums_pref   = request.session.get("sel_nums_pref") or []
+    sel_cantidad = request.session.get("sel_cantidad") or ""
+
     return render(request, "ventas/seleccionar.html", {
-        "evn":        evn,
-        "img_evento": svc.get_imagen_evento(evn),
-        "cantidades": cantidades,
+        "evn":          evn,
+        "img_evento":   svc.get_imagen_evento(evn),
+        "cantidades":   cantidades,
+        "cupon_sec":    cupon_sec,
+        "sel_cantidad": sel_cantidad,
+        "sel_nums_pref": nums_pref,
     })
 
 
@@ -137,6 +145,9 @@ def proximo_api(request, evn):
     except Exception:
         return JsonResponse({"ok": False, "error": "Cantidad inválida"})
     nums_pref = body.get("nums_pref") or []
+
+    request.session["sel_cantidad"]  = cantidad
+    request.session["sel_nums_pref"] = nums_pref
 
     pvt = svc.get_pvt_sort(evn)
     if not pvt or cantidad not in pvt.get("rangos", {}):
@@ -176,6 +187,7 @@ def datos_view(request, evn):
         "img_evento":      svc.get_imagen_evento(evn),
         "tipos_identidad": svc.get_all_tipoidentidad(),
         "tipos_persona":   svc.get_all_tipopersona(),
+        "persona_dni":     str(request.session.get("persona_dni", "") or ""),
     })
 
 

@@ -70,6 +70,9 @@ const URL_CARTONES  = "{% url 'ventas:cartones_api' evn %}";
 const URL_CONFIRMAR = "{% url 'ventas:confirmar_cupon' evn %}";
 const URL_PRINCIPAL = "{% url 'ventas:principal' evn %}";
 const CSRF = "{{ csrf_token }}";
+const SAVED_CANTIDAD  = "{{ sel_cantidad }}";
+const SAVED_NUMS_PREF = {{ sel_nums_pref|safe }};
+const SAVED_CUPON_SEC = {% if cupon_sec %}{{ cupon_sec }}{% else %}0{% endif %};
 
 let secuencias = [];
 let currentIdx = 0;
@@ -211,5 +214,23 @@ document.getElementById('btn-anterior').addEventListener('click', function() {
         fetchCartones(secuencias[currentIdx]);
     }
 });
+
+// Restaurar estado previo al cargar la página
+(function restaurarEstado() {
+    if (SAVED_CANTIDAD) {
+        const sel = document.getElementById('sel-cantidad');
+        if (sel) sel.value = String(SAVED_CANTIDAD);
+    }
+    if (SAVED_NUMS_PREF && SAVED_NUMS_PREF.length) {
+        const inputs = document.querySelectorAll('.num-pref');
+        SAVED_NUMS_PREF.forEach((n, i) => { if (inputs[i]) inputs[i].value = n; });
+        actualizarBtnProximo();
+    }
+    if (SAVED_CUPON_SEC) {
+        secuencias = [SAVED_CUPON_SEC];
+        currentIdx = 0;
+        fetchCartones(SAVED_CUPON_SEC);
+    }
+})();
 </script>
 {% endblock %}

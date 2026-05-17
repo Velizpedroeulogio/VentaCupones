@@ -18,7 +18,7 @@
         <div class="d-flex gap-2 align-items-center">
             <input type="number" id="inp-dni" min="1"
                    style="width:150px;text-align:center;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;"
-                   placeholder="DNI">
+                   placeholder="DNI" value="{{ persona_dni }}">
             <button class="byl-btn" type="button" id="btn-buscar-dni">Confirma</button>
         </div>
         <div id="msg-error-dni" class="byl-error mt-2" style="display:none;"></div>
@@ -158,6 +158,10 @@ function setupLookup(cfg) {
 }
 
 CAMPOS_LOOKUP.forEach(cfg => setupLookup(cfg));
+
+if (document.getElementById('inp-dni').value.trim()) {
+    document.getElementById('btn-buscar-dni').click();
+}
 
 document.getElementById('btn-buscar-dni').addEventListener('click', async function() {
     mostrarErrorDni('');
