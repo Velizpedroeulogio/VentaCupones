@@ -107,11 +107,11 @@ function cargarPersona(persona) {
     });
     const locHid = document.getElementById('f-per_localidad_id');
     const locTxt = document.getElementById('f-per_localidad_txt');
-    if (locHid) locHid.value = persona.per_localidad_id || '';
+    if (locHid) locHid.value = persona._loc_desc || '';
     if (locTxt) locTxt.value = persona._loc_desc || '';
     const prvHid = document.getElementById('f-per_provincia_id');
     const prvTxt = document.getElementById('f-per_provincia_txt');
-    if (prvHid) prvHid.value = persona.per_provincia_id || '';
+    if (prvHid) prvHid.value = persona._prv_desc || '';
     if (prvTxt) prvTxt.value = persona._prv_desc || '';
 }
 
@@ -151,12 +151,12 @@ function setupLookup(cfg) {
             if (d.ok) {
                 lastItems = d.items;
                 if (d.items.length === 1) {
-                    hidEl.value = d.items[0].id;
+                    hidEl.value = d.items[0].nombre;
                     txtEl.value = d.items[0].nombre;
                     document.getElementById(cfg.drop).style.display = 'none';
                 } else {
                     buildDropdown(cfg.drop, d.items, (id, nombre) => {
-                        hidEl.value = id; txtEl.value = nombre;
+                        hidEl.value = nombre; txtEl.value = nombre;
                     });
                 }
             }
@@ -170,9 +170,11 @@ function setupLookup(cfg) {
                 const q = textoActual.toLowerCase();
                 const exacto = lastItems.find(i => i.nombre.toLowerCase() === q);
                 if (exacto) {
-                    hidEl.value = exacto.id; txtEl.value = exacto.nombre;
+                    hidEl.value = exacto.nombre; txtEl.value = exacto.nombre;
                 } else if (lastItems.length === 1) {
-                    hidEl.value = lastItems[0].id; txtEl.value = lastItems[0].nombre;
+                    hidEl.value = lastItems[0].nombre; txtEl.value = lastItems[0].nombre;
+                } else {
+                    hidEl.value = textoActual; txtEl.value = textoActual;
                 }
             }
             document.getElementById(cfg.drop).style.display = 'none';

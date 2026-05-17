@@ -206,8 +206,8 @@ def datos_buscar_api(request, evn):
         return JsonResponse({"ok": False, "error": "Ingrese el DNI"})
     persona = svc.get_persona(dni)
     if persona:
-        persona['_loc_desc'] = persona.get('per_localidad_id', '')
-        persona['_prv_desc'] = persona.get('per_provincia_id', '')
+        persona['_loc_desc'] = svc.get_nombre_by_id('app_core_localidad', 'loc_nombre', persona.get('per_localidad_id'))
+        persona['_prv_desc'] = svc.get_nombre_by_id('app_core_provincia', 'pro_provincia', persona.get('per_provincia_id'))
         persona['_tid_desc'] = svc.get_nombre_by_id('app_gbl_tipoidentidad','tid_tipo_identidad',persona.get('per_tipo_identidad_id'))
         persona['_tpe_desc'] = svc.get_nombre_by_id('app_gbl_tipopersona', 'tpe_tipo_persona',  persona.get('per_tipo_persona_id'))
         return JsonResponse({"ok": True, "found": True, "persona": persona})
@@ -240,6 +240,8 @@ def datos_guardar_api(request, evn):
         return JsonResponse({"ok": False, "error": "Puerta es requerida"})
     if not data.get('per_localidad_id'):
         return JsonResponse({"ok": False, "error": "Localidad es requerida"})
+    if not data.get('per_provincia_id'):
+        return JsonResponse({"ok": False, "error": "Provincia es requerida"})
     if not data.get('per_celular') and not data.get('per_email'):
         return JsonResponse({"ok": False, "error": "Celular o eMail son requeridos"})
     if not data.get('per_tipo_identidad_id'):

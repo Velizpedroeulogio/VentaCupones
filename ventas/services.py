@@ -412,9 +412,8 @@ def get_persona(numero_identidad):
 
 
 def save_persona(data):
-    def _i(v):
-        try: return int(v) if str(v).strip() else None
-        except: return None
+    provincia_id = get_or_create_provincia(data.get('per_provincia_id'))
+    localidad_id = get_or_create_localidad(data.get('per_localidad_id'), provincia_id)
 
     with connection.cursor() as cur:
         cur.execute(
@@ -438,8 +437,8 @@ def save_persona(data):
                 data.get('per_telefono') or None,
                 data.get('per_celular') or None,
                 data.get('per_email') or None,
-                str(data.get('per_localidad_id') or '').strip() or None,
-                str(data.get('per_provincia_id') or '').strip() or None,
+                localidad_id,
+                provincia_id,
                 int(data['per_tipo_identidad_id']),
                 int(data['per_tipo_persona_id']),
                 data.get('per_alias_cbu') or None,
@@ -447,6 +446,45 @@ def save_persona(data):
             )
         )
         return cur.rowcount > 0
+
+
+# ------------------------------------------------------------------ GET OR CREATE LOOKUP
+
+def get_or_create_provincia(nombre):
+    nombre = str(nombre or '').strip()
+    if not nombre:
+        return None
+    row = _fetchone(
+        'SELECT id FROM "app_core_provincia" WHERE UPPER("pro_provincia") = UPPER(%s)',
+        (nombre,)
+    )
+    if row:
+        return row[0]
+    with connection.cursor() as cur:
+        cur.execute(
+            'INSERT INTO "app_core_provincia" ("pro_provincia", "pro_codigo31662") VALUES (%s, %s) RETURNING id',
+            (nombre, '')
+        )
+        return cur.fetchone()[0]
+
+
+def get_or_create_localidad(nombre, provincia_id):
+    nombre = str(nombre or '').strip()
+    if not nombre or not provincia_id:
+        return None
+    row = _fetchone(
+        'SELECT id FROM "app_core_localidad"'
+        ' WHERE UPPER("loc_nombre") = UPPER(%s) AND "loc_provincia_id" = %s',
+        (nombre, provincia_id)
+    )
+    if row:
+        return row[0]
+    with connection.cursor() as cur:
+        cur.execute(
+            'INSERT INTO "app_core_localidad" ("loc_nombre", "loc_cp", "loc_provincia_id") VALUES (%s, %s, %s) RETURNING id',
+            (nombre, '', provincia_id)
+        )
+        return cur.fetchone()[0]
 
 
 # ------------------------------------------------------------------ LOOKUPS FK
