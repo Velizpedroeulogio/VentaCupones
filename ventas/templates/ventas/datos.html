@@ -166,7 +166,7 @@ function setupLookup(cfg) {
     txtEl.addEventListener('blur', function() {
         const textoActual = this.value.trim();
         setTimeout(() => {
-            if (textoActual && !hidEl.value && lastItems.length) {
+            if (textoActual && !hidEl.value) {
                 const q = textoActual.toLowerCase();
                 const exacto = lastItems.find(i => i.nombre.toLowerCase() === q);
                 if (exacto) {
@@ -174,7 +174,7 @@ function setupLookup(cfg) {
                 } else if (lastItems.length === 1) {
                     hidEl.value = lastItems[0].nombre; txtEl.value = lastItems[0].nombre;
                 } else {
-                    hidEl.value = textoActual; txtEl.value = textoActual;
+                    hidEl.value = textoActual;
                 }
             }
             document.getElementById(cfg.drop).style.display = 'none';
