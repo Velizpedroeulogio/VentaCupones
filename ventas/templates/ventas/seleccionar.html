@@ -51,11 +51,8 @@
         </div>
     </div>
 
-    <!-- Formulario oculto para confirmar cupón -->
-    <form id="form-confirmar" method="post" action="{% url 'ventas:confirmar_cupon' evn %}" style="display:none;">
-        {% csrf_token %}
-        <input type="hidden" id="inp-sec" name="sec" value="">
-    </form>
+    <!-- Campo oculto para secuencia seleccionada -->
+    <input type="hidden" id="inp-sec" value="">
 
     <!-- Botones siempre visibles -->
     <div class="d-flex gap-2 mt-3 flex-wrap">
@@ -68,8 +65,10 @@
 </div>
 
 <script>
-const URL_PROXIMO  = "{% url 'ventas:proximo_api' evn %}";
-const URL_CARTONES = "{% url 'ventas:cartones_api' evn %}";
+const URL_PROXIMO   = "{% url 'ventas:proximo_api' evn %}";
+const URL_CARTONES  = "{% url 'ventas:cartones_api' evn %}";
+const URL_CONFIRMAR = "{% url 'ventas:confirmar_cupon' evn %}";
+const URL_PRINCIPAL = "{% url 'ventas:principal' evn %}";
 const CSRF = "{{ csrf_token }}";
 
 let secuencias = [];
@@ -169,8 +168,26 @@ document.getElementById('btn-buscar').addEventListener('click', function() {
     fetchSecuencias(nums);
 });
 
-document.getElementById('btn-confirmar').addEventListener('click', function() {
-    document.getElementById('form-confirmar').submit();
+document.getElementById('btn-confirmar').addEventListener('click', async function() {
+    mostrarError('');
+    const sec = parseInt(document.getElementById('inp-sec').value);
+    if (!sec) { mostrarError('Sin cupón seleccionado'); return; }
+    try {
+        const r = await fetch(URL_CONFIRMAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({sec})
+        });
+        const d = await r.json();
+        if (!d.ok) {
+            mostrarError(d.error);
+            if (d.concurrencia) limpiarResultado();
+            return;
+        }
+        window.location.href = URL_PRINCIPAL;
+    } catch(e) {
+        mostrarError('Error de conexión');
+    }
 });
 
 document.getElementById('btn-proximo-pag').addEventListener('click', function() {

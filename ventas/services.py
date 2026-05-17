@@ -306,6 +306,14 @@ def _codificar_num(num):
     return enc_odd, enc_even
 
 
+_EST_DISPONIBLE = (
+    "(\"EVNC_EST\" = 'P' OR (\"EVNC_EST\" = 'X' AND \"EVNC_TIME\" < NOW() - INTERVAL '5 minutes'))"
+)
+_EST_DISPONIBLE_A = (
+    "(A.\"EVNC_EST\" = 'P' OR (A.\"EVNC_EST\" = 'X' AND A.\"EVNC_TIME\" < NOW() - INTERVAL '5 minutes'))"
+)
+
+
 def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
     params = [evn, scd, sch]
     if nums_pref:
@@ -321,7 +329,7 @@ def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
             '    ON B."MTZ_NUM" = A."MTZ_NUM" AND B."CAR_SER" = A."CAR_SER"'
             '   AND B."CAR_NUM" = A."CAR_NUM"'
             ' WHERE A."EVNC_NUM" = %s AND A."EVNC_SEC" BETWEEN %s AND %s'
-            "   AND A.\"EVNC_EST\" = 'P'"
+            '   AND ' + _EST_DISPONIBLE_A +
             '   AND ' + ' AND '.join(like_parts) +
             ' ORDER BY A."EVNC_SEC" LIMIT 5'
         )
@@ -329,11 +337,21 @@ def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
         sql = (
             'SELECT DISTINCT "EVNC_SEC" FROM "EVNC_CAR"'
             ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" BETWEEN %s AND %s'
-            "   AND \"EVNC_EST\" = 'P'"
+            '   AND ' + _EST_DISPONIBLE +
             ' ORDER BY "EVNC_SEC" LIMIT 5'
         )
     rows = _fetchall(sql, params)
     return [int(r[0]) for r in rows]
+
+
+def reservar_cupon(evn, sec):
+    with connection.cursor() as cur:
+        cur.execute(
+            'UPDATE "EVNC_CAR" SET "EVNC_EST" = %s, "EVNC_TIME" = NOW()'
+            ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" = %s AND "EVNC_EST" = %s',
+            ('X', evn, int(sec), 'P')
+        )
+        return cur.rowcount > 0
 
 
 # ------------------------------------------------------------------ PUBLICACIONES

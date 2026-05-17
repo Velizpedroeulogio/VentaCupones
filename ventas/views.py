@@ -262,10 +262,22 @@ def datos_lookup_api(request, evn):
     return JsonResponse({"ok": False, "error": "Tipo inválido"})
 
 
+@csrf_exempt
 def confirmar_cupon(request, evn):
     if request.method != "POST":
-        return redirect("ventas:seleccionar", evn=evn)
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
     if request.session.get("evn") != evn:
-        return redirect("ventas:login", evn=evn)
-    request.session["cupon_sec"] = request.POST.get("sec", "")
-    return redirect("ventas:principal", evn=evn)
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    try:
+        body = json.loads(request.body)
+        sec = int(body.get("sec", 0))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Datos inválidos"}, status=400)
+    if not sec:
+        return JsonResponse({"ok": False, "error": "Cupón inválido"})
+    ok = svc.reservar_cupon(evn, sec)
+    if not ok:
+        return JsonResponse({"ok": False, "concurrencia": True,
+                             "error": "Debe buscar nuevamente por una concurrencia operativa"})
+    request.session["cupon_sec"] = str(sec)
+    return JsonResponse({"ok": True})
