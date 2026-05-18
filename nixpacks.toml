@@ -8,4 +8,4 @@ cmds = ["pip install -r requirements.txt"]
 cmds = ["python manage.py collectstatic --noinput"]
 
 [start]
-cmd = "gunicorn ventas_project.wsgi:application --bind 0.0.0.0:$PORT"
+cmd = "python manage.py migrate --noinput && gunicorn ventas_project.wsgi:application --bind 0.0.0.0:$PORT"
