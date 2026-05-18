@@ -142,7 +142,8 @@ def get_pvt_sort(evn):
     row = _fetchone(
         'SELECT "PVT_FCHX","PVT_FCHD","PVT_FCHH",'
         '       "PVT_CHN1","PVT_CHN2","PVT_CHN3","PVT_CHN4","PVT_CHN5",'
-        '       "PVT_CHN6","PVT_CHN7","PVT_CHN8","PVT_CHN9"'
+        '       "PVT_CHN6","PVT_CHN7","PVT_CHN8","PVT_CHN9",'
+        '       "PVT_BURL","PVT_WMSG","PVT_EMSJ","PVT_WPRO"'
         ' FROM "PVT_SORT"'
         ' WHERE "PVT_EVN" = %s AND "PVT_FCHX" <= %s'
         ' ORDER BY "PVT_FCHX" DESC'
@@ -152,7 +153,7 @@ def get_pvt_sort(evn):
     if not row:
         return None
     precios = {}
-    for i, val in enumerate(row[3:], start=1):
+    for i, val in enumerate(row[3:12], start=1):
         if val is not None:
             try:
                 precios[i] = float(val)
@@ -187,6 +188,10 @@ def get_pvt_sort(evn):
         "pvt_fchh": row[2],
         "precios":  precios,
         "rangos":   rangos,
+        "burl":     str(row[12] or ""),
+        "wmsg":     str(row[13] or ""),
+        "emsj":     str(row[14] or ""),
+        "wpro":     str(row[15] or ""),
     }
 
 
@@ -599,3 +604,98 @@ def get_nombre_by_id(tabla, col, id_val):
         return str(row[0]) if row else ''
     except Exception:
         return ''
+
+
+# ------------------------------------------------------------------ NOTIFICACIONES
+def _calc_mod10(txt):
+    s = ''.join(c for c in str(txt or '') if c.isdigit())
+    if not s:
+        return 0
+    suma, fact = 0, 2
+    for c in reversed(s):
+        val = int(c) * fact
+        if val > 9:
+            val = val // 10 + val % 10
+        suma += val
+        fact = 1 if fact == 2 else 2
+    return (10 - (suma % 10)) % 10
+
+
+def _gen_url_id(evn, sec):
+    s_evn = str(evn).zfill(5)
+    s_sec = str(sec).zfill(6)
+    dv1 = _calc_mod10(s_evn + s_sec)
+    dv2 = _calc_mod10(str(dv1) + s_sec + s_evn)
+    return f"{s_evn}{s_sec}{dv1}{dv2}"
+
+
+def _enviar_whatsapp(celular, texto, wpro):
+    import os, re, requests as req
+    digits = re.sub(r'\D', '', celular)
+    if not digits.startswith('54'):
+        digits = '54' + digits
+    if wpro == 'T':
+        sid   = os.environ.get('TWILIO_SID', '')
+        token = os.environ.get('TWILIO_TOKEN', '')
+        from_ = os.environ.get('TWILIO_FROM', '')
+        if not sid or not token or not from_:
+            return
+        req.post(
+            f'https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json',
+            auth=(sid, token),
+            data={'From': f'whatsapp:{from_}', 'To': f'whatsapp:+{digits}', 'Body': texto},
+            timeout=10,
+        )
+    else:  # 'C' = CallMeBot
+        key = os.environ.get('CALLMEBOT_KEY', '')
+        if not key:
+            return
+        req.get(
+            'https://api.callmebot.com/whatsapp.php',
+            params={'phone': digits, 'text': texto, 'apikey': key},
+            timeout=10,
+        )
+
+
+def _enviar_email(to_addr, subject, body):
+    import os, smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    port = int(os.environ.get('SMTP_PORT', '465'))
+    user = os.environ.get('SMTP_USER', '')
+    pwd  = os.environ.get('SMTP_PASS', '')
+    if not user or not pwd:
+        return
+    msg = MIMEMultipart()
+    msg['From']    = user
+    msg['To']      = to_addr
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+    with smtplib.SMTP_SSL(host, port) as s:
+        s.login(user, pwd)
+        s.sendmail(user, to_addr, msg.as_string())
+
+
+def enviar_notif_venta(evn, sec, persona, pvt):
+    """Envía WhatsApp o email tras confirmar la venta. Nunca lanza excepciones."""
+    try:
+        burl = str(pvt.get('burl') or '').strip()
+        wmsg_tpl = str(pvt.get('wmsg') or '').strip()
+        emsj_tpl = str(pvt.get('emsj') or '').strip()
+        wpro     = str(pvt.get('wpro') or 'C').strip()
+        if not burl or not wmsg_tpl:
+            return
+        nombre  = str(persona.get('per_nombre') or '')
+        cupon   = str(sec).zfill(6)
+        celular = str(persona.get('per_celular') or '').strip()
+        email   = str(persona.get('per_email')   or '').strip()
+        url     = f"{burl.rstrip('/')}/?id={_gen_url_id(evn, sec)}"
+        texto   = wmsg_tpl.format(nombre=nombre, cupon=cupon, url=url)
+        if celular:
+            _enviar_whatsapp(celular, texto, wpro)
+        elif email:
+            asunto = emsj_tpl.format(nombre=nombre, cupon=cupon, url=url) if emsj_tpl else f"Tu cupón N° {cupon}"
+            _enviar_email(email, asunto, texto)
+    except Exception:
+        pass

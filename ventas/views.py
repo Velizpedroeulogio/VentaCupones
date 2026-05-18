@@ -365,6 +365,9 @@ def confirmar_venta_api(request, evn):
 
     for key in ("cupon_sec", "persona_dni", "sel_cantidad", "sel_nums_pref"):
         request.session.pop(key, None)
+
+    svc.enviar_notif_venta(evn, int(cupon_sec), persona, pvt or {})
+
     return JsonResponse({"ok": True})
 
 
