@@ -354,7 +354,7 @@ def reservar_cupon(evn, sec, usuario):
         return cur.rowcount > 0
 
 
-def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=None, precio=0):
+def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=None, fpgo=None, precio=0):
     from datetime import date, datetime
     hoy   = date.today()
     ahora = datetime.now().time()
@@ -363,19 +363,20 @@ def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=
             cur.execute(
                 'UPDATE "EVNC_CAR"'
                 ' SET "EVNC_EST"=%s,"EVNC_VEN"=%s,"EVNC_TIME"=NOW(),'
-                '     "EVNC_NID"=%s,"EVNC_NOM"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s'
+                '     "EVNC_NID"=%s,"EVNC_NOM"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s,'
+                '     "EVNC_FPGO"=%s'
                 ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
-                ('V', str(usuario or ''), nid, nom, dom, loc, ref, evn, int(sec))
+                ('V', str(usuario or ''), nid, nom, dom, loc, ref, fpgo, evn, int(sec))
             )
             if cur.rowcount == 0:
                 return False
             cur.execute(
                 'INSERT INTO "MDP_MOV"'
                 ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
-                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE")'
-                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE","MDP_FPGO","MDP_NID")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
                 (hoy, ahora, 1, evn, str(usuario or ''), 1,
-                 precio, 'C', 'I', str(sec).zfill(6))
+                 precio, 'C', 'I', str(sec).zfill(6), fpgo, nid)
             )
             return True
 

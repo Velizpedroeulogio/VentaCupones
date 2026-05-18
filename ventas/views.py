@@ -275,6 +275,14 @@ def confirmar_venta_api(request, evn):
         return JsonResponse({"ok": False, "error": "Falta ingresar los datos del comprador"})
 
     try:
+        body = json.loads(request.body) if request.body else {}
+    except Exception:
+        body = {}
+    fpgo = str(body.get('fpgo', '') or '').strip()
+    if fpgo not in ('E', 'T', 'C', 'D', 'Q'):
+        return JsonResponse({"ok": False, "error": "Seleccione la forma de pago"})
+
+    try:
         persona = svc.get_persona(persona_dni)
         if not persona:
             return JsonResponse({"ok": False, "error": "No se encontraron los datos del comprador"})
@@ -298,7 +306,7 @@ def confirmar_venta_api(request, evn):
         ok = svc.vender_cupon(
             evn, int(cupon_sec), usuario,
             nid=int(persona_dni), nom=v('per_nombre'),
-            dom=dom, loc=loc, ref=ref, precio=precio
+            dom=dom, loc=loc, ref=ref, fpgo=fpgo, precio=precio
         )
     except Exception as e:
         return JsonResponse({"ok": False, "error": f"Error interno: {e}"})
