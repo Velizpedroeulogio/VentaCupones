@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from django.db import connection
+from django.db import connection, transaction
 
 _KEY1 = os.environ.get("GBYL_KEY1", "dvtcksqonz")
 _KEY2 = os.environ.get("GBYL_KEY2", "ABCDEFGHIJ")
@@ -356,27 +356,28 @@ def reservar_cupon(evn, sec, usuario):
 
 def vender_cupon(evn, sec, usuario, nid=None, dom=None, loc=None, ref=None, precio=0):
     from datetime import date, datetime
-    hoy  = date.today()
+    hoy   = date.today()
     ahora = datetime.now().time()
-    with connection.cursor() as cur:
-        cur.execute(
-            'UPDATE "EVNC_CAR"'
-            ' SET "EVNC_EST"=%s,"EVNC_VEN"=%s,"EVNC_TIME"=NOW(),'
-            '     "EVNC_NID"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s'
-            ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
-            ('V', str(usuario or ''), nid, dom, loc, ref, evn, int(sec))
-        )
-        if cur.rowcount == 0:
-            return False
-        cur.execute(
-            'INSERT INTO "MDP_MOV"'
-            ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
-            '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE")'
-            ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-            (hoy, ahora, 1, evn, str(usuario or ''), 1,
-             precio, 'C', 'I', str(sec).zfill(6))
-        )
-        return True
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            cur.execute(
+                'UPDATE "EVNC_CAR"'
+                ' SET "EVNC_EST"=%s,"EVNC_VEN"=%s,"EVNC_TIME"=NOW(),'
+                '     "EVNC_NID"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s'
+                ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
+                ('V', str(usuario or ''), nid, dom, loc, ref, evn, int(sec))
+            )
+            if cur.rowcount == 0:
+                return False
+            cur.execute(
+                'INSERT INTO "MDP_MOV"'
+                ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
+                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (hoy, ahora, 1, evn, str(usuario or ''), 1,
+                 precio, 'C', 'I', str(sec).zfill(6))
+            )
+            return True
 
 
 # ------------------------------------------------------------------ PUBLICACIONES
