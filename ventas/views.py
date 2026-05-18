@@ -294,10 +294,13 @@ def confirmar_venta_api(request, evn):
     precio = pvt["precios"].get(sel_cantidad, 0) if pvt else 0
 
     usuario = request.session.get("usuario", "")
-    ok = svc.vender_cupon(
-        evn, int(cupon_sec), usuario,
-        nid=int(persona_dni), dom=dom, loc=loc, ref=ref, precio=precio
-    )
+    try:
+        ok = svc.vender_cupon(
+            evn, int(cupon_sec), usuario,
+            nid=int(persona_dni), dom=dom, loc=loc, ref=ref, precio=precio
+        )
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": f"Error interno: {e}"})
     if not ok:
         return JsonResponse({"ok": False, "error": "No se pudo confirmar la venta. El cupón ya no está disponible."})
 
