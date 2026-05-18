@@ -274,33 +274,34 @@ def confirmar_venta_api(request, evn):
     if not persona_dni:
         return JsonResponse({"ok": False, "error": "Falta ingresar los datos del comprador"})
 
-    persona = svc.get_persona(persona_dni)
-    if not persona:
-        return JsonResponse({"ok": False, "error": "No se encontraron los datos del comprador"})
-
-    loc_text = svc.get_nombre_by_id('app_core_localidad', 'loc_nombre', persona.get('per_localidad_id'))
-    prv_text = svc.get_nombre_by_id('app_core_provincia', 'pro_provincia', persona.get('per_provincia_id'))
-
-    def v(key): return persona.get(key) or ''
-    dom = f"{v('per_barrio')}|{v('per_calle')}|{v('per_puerta')}|{v('per_piso')}|{v('per_depto')}|"
-    loc = f"{prv_text}|{loc_text}|{v('per_codigo_postal')}|"
-    ref = f"{v('per_celular')}|{v('per_email')}|{v('per_telefono')}|{v('per_alias_cbu')}|{v('per_cbu')}|"
-
-    pvt = svc.get_pvt_sort(evn)
     try:
-        sel_cantidad = int(request.session.get("sel_cantidad") or 0)
-    except Exception:
-        sel_cantidad = 0
-    precio = pvt["precios"].get(sel_cantidad, 0) if pvt else 0
+        persona = svc.get_persona(persona_dni)
+        if not persona:
+            return JsonResponse({"ok": False, "error": "No se encontraron los datos del comprador"})
 
-    usuario = request.session.get("usuario", "")
-    try:
+        loc_text = svc.get_nombre_by_id('app_core_localidad', 'loc_nombre', persona.get('per_localidad_id'))
+        prv_text = svc.get_nombre_by_id('app_core_provincia', 'pro_provincia', persona.get('per_provincia_id'))
+
+        def v(key): return persona.get(key) or ''
+        dom = f"{v('per_barrio')}|{v('per_calle')}|{v('per_puerta')}|{v('per_piso')}|{v('per_depto')}|"
+        loc = f"{prv_text}|{loc_text}|{v('per_codigo_postal')}|"
+        ref = f"{v('per_celular')}|{v('per_email')}|{v('per_telefono')}|{v('per_alias_cbu')}|{v('per_cbu')}|"
+
+        pvt = svc.get_pvt_sort(evn)
+        try:
+            sel_cantidad = int(request.session.get("sel_cantidad") or 0)
+        except Exception:
+            sel_cantidad = 0
+        precio = pvt["precios"].get(sel_cantidad, 0) if pvt else 0
+
+        usuario = request.session.get("usuario", "")
         ok = svc.vender_cupon(
             evn, int(cupon_sec), usuario,
             nid=int(persona_dni), dom=dom, loc=loc, ref=ref, precio=precio
         )
     except Exception as e:
         return JsonResponse({"ok": False, "error": f"Error interno: {e}"})
+
     if not ok:
         return JsonResponse({"ok": False, "error": "No se pudo confirmar la venta. El cupón ya no está disponible."})
 
