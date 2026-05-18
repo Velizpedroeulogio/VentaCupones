@@ -14,7 +14,11 @@
 
     <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
         <span style="font-size:13px;color:#555;">Hola, <strong>{{ nombre }}</strong></span>
-        <a class="byl-btn" href="{% url 'ventas:logout' evn %}" style="font-size:12px;padding:4px 10px;">Salir</a>
+        <div class="d-flex gap-2">
+            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 1 %}" style="font-size:12px;padding:4px 10px;">Ventas</a>
+            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 2 %}" style="font-size:12px;padding:4px 10px;">Comisiones</a>
+            <a class="byl-btn" href="{% url 'ventas:logout' evn %}" style="font-size:12px;padding:4px 10px;">Salir</a>
+        </div>
     </div>
 
     {% if not precios_lista %}

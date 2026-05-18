@@ -179,6 +179,31 @@ def cartones_api(request, evn):
     return JsonResponse({"ok": True, "sec": sec, "cartones": cartones})
 
 
+def movimientos_view(request, evn, prd):
+    if request.session.get("evn") != evn:
+        return redirect("ventas:login", evn=evn)
+    usuario  = request.session.get("usuario", "")
+    movs_raw = svc.get_movimientos(evn, usuario, prd)
+    movimientos = [
+        {**m, 'valo_fmt': _fmt_precio(m['valo'])}
+        for m in movs_raw
+    ]
+    periodo_desde = periodo_hasta = ''
+    fechas = [m['fcha'] for m in movs_raw if m['fcha']]
+    if fechas:
+        periodo_desde = min(fechas).strftime('%d.%m.%Y')
+        periodo_hasta = max(fechas).strftime('%d.%m.%Y')
+    prd_desc = svc.get_prd_desc(prd) or ('Ventas' if prd == 1 else 'Comisiones')
+    return render(request, "ventas/movimientos.html", {
+        "evn":           evn,
+        "img_evento":    svc.get_imagen_evento(evn),
+        "prd_desc":      prd_desc,
+        "movimientos":   movimientos,
+        "periodo_desde": periodo_desde,
+        "periodo_hasta": periodo_hasta,
+    })
+
+
 def datos_view(request, evn):
     if request.session.get("evn") != evn:
         return redirect("ventas:login", evn=evn)

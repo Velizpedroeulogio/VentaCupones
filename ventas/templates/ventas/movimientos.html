@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ prd_desc }}{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <div class="byl-title mt-2 mb-1">Cuentas – {{ prd_desc }}</div>
+
+    {% if periodo_desde %}
+    <div style="font-size:12px;color:#666;margin-bottom:8px;">
+        Período: {{ periodo_desde }} al {{ periodo_hasta }}
+    </div>
+    {% endif %}
+
+    {% if movimientos %}
+    <div class="byl-card" style="padding:0;overflow:hidden;">
+
+        <!-- Encabezado -->
+        <div style="background:#f0f0f0;padding:6px 10px 0 10px;">
+            <div style="display:grid;grid-template-columns:42px 18px 1fr 90px;gap:4px;font-size:11px;font-weight:bold;color:#444;">
+                <span>Fecha</span>
+                <span>Mov</span>
+                <span>Comprob.</span>
+                <span style="text-align:right;">Importe</span>
+            </div>
+            <div style="display:grid;grid-template-columns:42px 18px 1fr 90px;gap:4px;font-size:11px;font-weight:bold;color:#444;padding-bottom:5px;">
+                <span></span>
+                <span>Est</span>
+                <span>Referenc.</span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- Registros -->
+        {% for m in movimientos %}
+        <div style="border-top:1px solid #eee;padding:6px 10px;">
+            <div style="display:grid;grid-template-columns:42px 18px 1fr 90px;gap:4px;font-size:13px;">
+                <span>{{ m.fecha_fmt }}</span>
+                <span>{{ m.acci }}</span>
+                <span>{{ m.cpte }}</span>
+                <span style="text-align:right;white-space:nowrap;">{{ m.valo_fmt }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:42px 18px 1fr 90px;gap:4px;font-size:12px;color:#666;">
+                <span></span>
+                <span>{{ m.estd }}</span>
+                <span>{{ m.refe }}</span>
+                <span></span>
+            </div>
+            {% if m.per_nombre %}
+            <div style="font-size:12px;color:#888;margin-top:2px;">{{ m.per_nombre }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+    </div>
+    {% else %}
+    <div class="byl-card" style="font-size:13px;color:#999;">Sin movimientos registrados.</div>
+    {% endif %}
+
+    <div class="mt-3">
+        <a class="byl-btn" href="{% url 'ventas:principal' evn %}">Volver</a>
+    </div>
+
+</div>
+{% endblock %}

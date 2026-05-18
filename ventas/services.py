@@ -381,6 +381,39 @@ def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=
             return True
 
 
+# ------------------------------------------------------------------ MOVIMIENTOS
+def get_prd_desc(prd):
+    row = _fetchone('SELECT "PRD_DSCR" FROM "PRD_MOV" WHERE "ID" = %s', (int(prd),))
+    return str(row[0]) if row else ''
+
+
+def get_movimientos(evn, usuario, prd):
+    rows = _fetchall(
+        'SELECT M."MDP_FCHA", M."MDP_ACCI", M."MDP_CPTE", M."MDP_VALO",'
+        '       M."MDP_ESTD", M."MDP_REFE", M."MDP_NID",'
+        '       COALESCE(P."per_nombre", \'\') AS per_nombre'
+        '  FROM "MDP_MOV" M'
+        '  LEFT JOIN "app_gbl_persona" P ON P."per_numero_identidad" = M."MDP_NID"'
+        ' WHERE M."EVN_NUM" = %s AND M."VEN_COD" = %s AND M."PRD_ID" = %s'
+        ' ORDER BY M."MDP_FCHA", M."MDP_HORA"',
+        (evn, str(usuario), int(prd))
+    )
+    result = []
+    for r in rows:
+        fcha = r[0]
+        result.append({
+            'fcha':       fcha,
+            'fecha_fmt':  fcha.strftime('%d.%m') if fcha else '',
+            'acci':       str(r[1] or ''),
+            'cpte':       str(r[2] or ''),
+            'valo':       float(r[3]) if r[3] is not None else 0.0,
+            'estd':       str(r[4] or ''),
+            'refe':       str(r[5] or ''),
+            'per_nombre': str(r[7] or ''),
+        })
+    return result
+
+
 # ------------------------------------------------------------------ PUBLICACIONES
 def get_publicaciones(evn):
     hoy = fecha_hoy_aaaammdd()
