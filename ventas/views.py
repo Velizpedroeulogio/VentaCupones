@@ -182,25 +182,49 @@ def cartones_api(request, evn):
 def movimientos_view(request, evn, prd):
     if request.session.get("evn") != evn:
         return redirect("ventas:login", evn=evn)
+
+    from datetime import date, timedelta
+    hoy  = date.today()
+    ayer = hoy - timedelta(days=1)
+
+    desde_str = request.GET.get('desde', ayer.strftime('%Y-%m-%d'))
+    hasta_str = request.GET.get('hasta', hoy.strftime('%Y-%m-%d'))
+    fpgo_filt = request.GET.get('fpgo', '')
+    estd_filt = request.GET.get('estd', '')
+
+    try:
+        desde_date = date.fromisoformat(desde_str)
+    except Exception:
+        desde_date = ayer
+    try:
+        hasta_date = date.fromisoformat(hasta_str)
+    except Exception:
+        hasta_date = hoy
+
     usuario  = request.session.get("usuario", "")
-    movs_raw = svc.get_movimientos(evn, usuario, prd)
+    movs_raw = svc.get_movimientos(
+        evn, usuario, prd,
+        desde=desde_date, hasta=hasta_date,
+        fpgo=fpgo_filt or None,
+        estd=estd_filt or None,
+    )
     movimientos = [
         {**m, 'valo_fmt': _fmt_precio(m['valo'])}
         for m in movs_raw
     ]
-    periodo_desde = periodo_hasta = ''
-    fechas = [m['fcha'] for m in movs_raw if m['fcha']]
-    if fechas:
-        periodo_desde = min(fechas).strftime('%d.%m.%Y')
-        periodo_hasta = max(fechas).strftime('%d.%m.%Y')
     prd_desc = svc.get_prd_desc(prd) or ('Ventas' if prd == 1 else 'Comisiones')
     return render(request, "ventas/movimientos.html", {
-        "evn":           evn,
-        "img_evento":    svc.get_imagen_evento(evn),
-        "prd_desc":      prd_desc,
-        "movimientos":   movimientos,
-        "periodo_desde": periodo_desde,
-        "periodo_hasta": periodo_hasta,
+        "evn":        evn,
+        "img_evento": svc.get_imagen_evento(evn),
+        "prd_desc":   prd_desc,
+        "movimientos": movimientos,
+        "desde":      desde_date.strftime('%Y-%m-%d'),
+        "hasta":      hasta_date.strftime('%Y-%m-%d'),
+        "fpgo_filt":  fpgo_filt,
+        "estd_filt":  estd_filt,
+        "fpgo_opts":  [('','Todos'),('E','Efectivo'),('T','Transf.'),
+                       ('C','T.Crd.'),('D','T.Déb.'),('Q','QR'),('blank','S/Pago')],
+        "estd_opts":  [('','Todos'),('I','Ingresada'),('R','Rendida')],
     })
 
 
