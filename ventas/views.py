@@ -297,7 +297,8 @@ def confirmar_venta_api(request, evn):
         usuario = request.session.get("usuario", "")
         ok = svc.vender_cupon(
             evn, int(cupon_sec), usuario,
-            nid=int(persona_dni), dom=dom, loc=loc, ref=ref, precio=precio
+            nid=int(persona_dni), nom=v('per_nombre'),
+            dom=dom, loc=loc, ref=ref, precio=precio
         )
     except Exception as e:
         return JsonResponse({"ok": False, "error": f"Error interno: {e}"})

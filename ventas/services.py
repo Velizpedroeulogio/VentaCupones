@@ -354,7 +354,7 @@ def reservar_cupon(evn, sec, usuario):
         return cur.rowcount > 0
 
 
-def vender_cupon(evn, sec, usuario, nid=None, dom=None, loc=None, ref=None, precio=0):
+def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=None, precio=0):
     from datetime import date, datetime
     hoy   = date.today()
     ahora = datetime.now().time()
@@ -363,9 +363,9 @@ def vender_cupon(evn, sec, usuario, nid=None, dom=None, loc=None, ref=None, prec
             cur.execute(
                 'UPDATE "EVNC_CAR"'
                 ' SET "EVNC_EST"=%s,"EVNC_VEN"=%s,"EVNC_TIME"=NOW(),'
-                '     "EVNC_NID"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s'
+                '     "EVNC_NID"=%s,"EVNC_NOM"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s'
                 ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
-                ('V', str(usuario or ''), nid, dom, loc, ref, evn, int(sec))
+                ('V', str(usuario or ''), nid, nom, dom, loc, ref, evn, int(sec))
             )
             if cur.rowcount == 0:
                 return False
