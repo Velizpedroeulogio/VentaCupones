@@ -348,8 +348,8 @@ def reservar_cupon(evn, sec, usuario):
     with connection.cursor() as cur:
         cur.execute(
             'UPDATE "EVNC_CAR" SET "EVNC_EST" = %s, "EVNC_VEN" = %s, "EVNC_TIME" = NOW()'
-            ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" = %s AND "EVNC_EST" = %s',
-            ('X', str(usuario or ''), evn, int(sec), 'P')
+            ' WHERE "EVNC_NUM" = %s AND "EVNC_SEC" = %s AND "EVNC_EST" IN (\'P\', \'X\')',
+            ('X', str(usuario or ''), evn, int(sec))
         )
         return cur.rowcount > 0
 
