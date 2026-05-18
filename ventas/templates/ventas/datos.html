@@ -43,9 +43,10 @@
 </div>
 
 <script>
-const URL_BUSCAR  = "{% url 'ventas:datos_buscar' evn %}";
-const URL_GUARDAR = "{% url 'ventas:datos_guardar' evn %}";
-const URL_LOOKUP  = "{% url 'ventas:datos_lookup' evn %}";
+const URL_BUSCAR    = "{% url 'ventas:datos_buscar' evn %}";
+const URL_GUARDAR   = "{% url 'ventas:datos_guardar' evn %}";
+const URL_LOOKUP    = "{% url 'ventas:datos_lookup' evn %}";
+const URL_PRINCIPAL = "{% url 'ventas:principal' evn %}";
 const CSRF = "{{ csrf_token }}";
 
 const CAMPOS_TEXTO = [
@@ -242,7 +243,7 @@ document.getElementById('btn-confirma-per').addEventListener('click', async func
         const d = await r.json();
         if (!d.ok) { mostrarErrorPer(d.error); return; }
         mostrarOk('Datos confirmados.');
-        if (!personaEncontrada) setLocked(true);
+        setTimeout(() => window.location.href = URL_PRINCIPAL, 800);
     } catch(e) { mostrarErrorPer('Error de conexión'); }
 });
 </script>
