@@ -679,27 +679,39 @@ def _enviar_email(to_addr, subject, body):
 
 def enviar_notif_venta(evn, sec, persona, pvt):
     """Envía WhatsApp o email tras confirmar la venta. Nunca lanza excepciones."""
+    import logging
+    log = logging.getLogger(__name__)
     try:
-        burl = str(pvt.get('burl') or '').strip()
+        burl     = str(pvt.get('burl') or '').strip()
         wmsg_tpl = str(pvt.get('wmsg') or '').strip()
         emsj_tpl = str(pvt.get('emsj') or '').strip()
-        wpro     = str(pvt.get('wpro') or 'C').strip()
+        wpro     = str(pvt.get('wpro') or 'M').strip()
+        log.info("NOTIF evn=%s sec=%s wpro=%s burl=%s", evn, sec, wpro, burl)
         if not burl or not wmsg_tpl:
+            log.warning("NOTIF sin configurar: burl=%r wmsg=%r", burl, wmsg_tpl)
             return
         nombre  = str(persona.get('per_nombre') or '')
         cupon   = str(sec).zfill(6)
         celular = str(persona.get('per_celular') or '').strip()
         email   = str(persona.get('per_email')   or '').strip()
-        url     = f"{burl.rstrip('/')}/?id={_gen_url_id(evn, sec)}"
-        texto   = wmsg_tpl.format(nombre=nombre, cupon=cupon, url=url)
+        log.info("NOTIF destino: email=%r celular=%r", email, celular)
+        url    = f"{burl.rstrip('/')}/?id={_gen_url_id(evn, sec)}"
+        texto  = wmsg_tpl.format(nombre=nombre, cupon=cupon, url=url)
         asunto = emsj_tpl.format(nombre=nombre, cupon=cupon, url=url) if emsj_tpl else f"Tu cupón N° {cupon}"
         if wpro == 'M':
             if email:
                 _enviar_email(email, asunto, texto)
+                log.info("NOTIF email enviado a %s", email)
+            else:
+                log.warning("NOTIF wpro=M pero persona sin email")
         else:
             if celular:
                 _enviar_whatsapp(celular, texto, wpro)
+                log.info("NOTIF WA enviado a %s", celular)
             elif email:
                 _enviar_email(email, asunto, texto)
-    except Exception:
-        pass
+                log.info("NOTIF email enviado a %s", email)
+            else:
+                log.warning("NOTIF persona sin celular ni email")
+    except Exception as e:
+        log.error("NOTIF error: %s", e, exc_info=True)
