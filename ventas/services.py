@@ -688,10 +688,30 @@ def _enviar_email(to_addr, subject, body):
     log.info("SMTP OK enviado a %s", to_addr)
 
 
+def registrar_msg_proc(idpr, refe, txto, evn=None, sec=None, erro=None):
+    from datetime import date, datetime
+    try:
+        hoy   = date.today()
+        ahora = datetime.now().time()
+        with connection.cursor() as cur:
+            cur.execute(
+                'INSERT INTO "MSG_PROC"'
+                ' ("MSG_FCHA","MSG_HORA","MSG_IDPR","MSG_EVN","MSG_SEC",'
+                '  "MSG_REFE","MSG_TXTO","MSG_MRKA","MSG_ERRO")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (hoy, ahora, str(idpr or '')[:30], evn, sec,
+                 str(refe or '')[:200], str(txto or '')[:500],
+                 'P', str(erro or '')[:500])
+            )
+    except Exception:
+        pass
+
+
 def enviar_notif_venta(evn, sec, persona, pvt):
     """Envía WhatsApp o email tras confirmar la venta. Nunca lanza excepciones."""
     import logging
     log = logging.getLogger(__name__)
+    celular = email = texto = ''
     try:
         burl     = str(pvt.get('burl') or '').strip()
         wmsg_tpl = str(pvt.get('wmsg') or '').strip()
@@ -726,3 +746,11 @@ def enviar_notif_venta(evn, sec, persona, pvt):
                 log.warning("NOTIF persona sin celular ni email")
     except Exception as e:
         log.error("NOTIF error: %s", e, exc_info=True)
+        registrar_msg_proc(
+            idpr='VENTAS-ENVIO',
+            refe=f"{celular}|{email}",
+            txto=texto,
+            evn=evn,
+            sec=sec,
+            erro=str(e),
+        )
