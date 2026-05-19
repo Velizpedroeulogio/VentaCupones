@@ -692,10 +692,14 @@ def enviar_notif_venta(evn, sec, persona, pvt):
         email   = str(persona.get('per_email')   or '').strip()
         url     = f"{burl.rstrip('/')}/?id={_gen_url_id(evn, sec)}"
         texto   = wmsg_tpl.format(nombre=nombre, cupon=cupon, url=url)
-        if celular:
-            _enviar_whatsapp(celular, texto, wpro)
-        elif email:
-            asunto = emsj_tpl.format(nombre=nombre, cupon=cupon, url=url) if emsj_tpl else f"Tu cupón N° {cupon}"
-            _enviar_email(email, asunto, texto)
+        asunto = emsj_tpl.format(nombre=nombre, cupon=cupon, url=url) if emsj_tpl else f"Tu cupón N° {cupon}"
+        if wpro == 'M':
+            if email:
+                _enviar_email(email, asunto, texto)
+        else:
+            if celular:
+                _enviar_whatsapp(celular, texto, wpro)
+            elif email:
+                _enviar_email(email, asunto, texto)
     except Exception:
         pass
