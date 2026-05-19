@@ -658,14 +658,17 @@ def _enviar_whatsapp(celular, texto, wpro):
 
 
 def _enviar_email(to_addr, subject, body):
-    import os, smtplib
+    import os, smtplib, logging
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
+    log = logging.getLogger(__name__)
     host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
     port = int(os.environ.get('SMTP_PORT', '465'))
     user = os.environ.get('SMTP_USER', '')
     pwd  = os.environ.get('SMTP_PASS', '')
+    log.info("SMTP host=%s port=%s user=%r pwd_set=%s", host, port, user, bool(pwd))
     if not user or not pwd:
+        log.warning("SMTP sin credenciales — email NO enviado")
         return
     msg = MIMEMultipart()
     msg['From']    = user
@@ -675,6 +678,7 @@ def _enviar_email(to_addr, subject, body):
     with smtplib.SMTP_SSL(host, port) as s:
         s.login(user, pwd)
         s.sendmail(user, to_addr, msg.as_string())
+    log.info("SMTP OK enviado a %s", to_addr)
 
 
 def enviar_notif_venta(evn, sec, persona, pvt):
