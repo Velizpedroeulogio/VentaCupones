@@ -287,8 +287,6 @@ def datos_guardar_api(request, evn):
         return JsonResponse({"ok": False, "error": "Nombre es requerido"})
     if not data.get('per_calle'):
         return JsonResponse({"ok": False, "error": "Calle es requerida"})
-    if not data.get('per_puerta'):
-        return JsonResponse({"ok": False, "error": "Puerta es requerida"})
     if not data.get('per_localidad_id'):
         return JsonResponse({"ok": False, "error": "Localidad es requerida"})
     if not data.get('per_provincia_id'):

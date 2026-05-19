@@ -31,7 +31,7 @@
     <div class="byl-card" style="padding:0;overflow:hidden;">
 
         <!-- Encabezado -->
-        <div style="background:#f0f0f0;padding:6px 10px;display:grid;grid-template-columns:42px 22px 80px 22px 1fr 90px;column-gap:6px;font-size:11px;font-weight:bold;color:#444;">
+        <div style="background:#f0f0f0;padding:6px 10px;display:grid;grid-template-columns:60px 22px 80px 22px 1fr 90px;column-gap:6px;font-size:11px;font-weight:bold;color:#444;">
             <span>Fecha</span>
             <span>Mov</span>
             <span>Comprob.</span>
@@ -43,7 +43,7 @@
         <!-- Registros -->
         {% for m in movimientos %}
         <div style="border-top:1px solid #eee;padding:5px 10px;">
-            <div style="display:grid;grid-template-columns:42px 22px 80px 22px 1fr 90px;column-gap:6px;font-size:13px;">
+            <div style="display:grid;grid-template-columns:60px 22px 80px 22px 1fr 90px;column-gap:6px;font-size:13px;">
                 <span>{{ m.fecha_fmt }}</span>
                 <span>{{ m.acci }}</span>
                 <span>{{ m.cpte }}</span>

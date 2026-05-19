@@ -443,7 +443,7 @@ def get_movimientos(evn, usuario, prd, desde=None, hasta=None, fpgo=None, estd=N
         fcha = r[0]
         result.append({
             'fcha':       fcha,
-            'fecha_fmt':  fcha.strftime('%d.%m') if fcha else '',
+            'fecha_fmt':  fcha.strftime('%d.%m.%y') if fcha else '',
             'acci':       str(r[1] or ''),
             'cpte':       str(r[2] or ''),
             'valo':       float(r[3]) if r[3] is not None else 0.0,
