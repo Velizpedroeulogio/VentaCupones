@@ -675,9 +675,16 @@ def _enviar_email(to_addr, subject, body):
     msg['To']      = to_addr
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
-    with smtplib.SMTP_SSL(host, port) as s:
-        s.login(user, pwd)
-        s.sendmail(user, to_addr, msg.as_string())
+    if port == 587:
+        with smtplib.SMTP(host, port) as s:
+            s.ehlo()
+            s.starttls()
+            s.login(user, pwd)
+            s.sendmail(user, to_addr, msg.as_string())
+    else:
+        with smtplib.SMTP_SSL(host, port) as s:
+            s.login(user, pwd)
+            s.sendmail(user, to_addr, msg.as_string())
     log.info("SMTP OK enviado a %s", to_addr)
 
 
