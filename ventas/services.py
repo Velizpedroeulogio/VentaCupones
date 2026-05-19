@@ -62,6 +62,27 @@ def get_evento(evn):
     return str(row[0] or "") if row else ""
 
 
+# ------------------------------------------------------------------ EVENTO DEFAULTS
+def get_evento_defaults(evn):
+    row = _fetchone(
+        'SELECT "EVN_DFTCALL","EVN_DFTBARR","EVN_DFTPROV","EVN_DFTLOCA",'
+        '       "EVN_DFTTID","EVN_DFTTPE","EVN_DFTCPOS"'
+        ' FROM "EVN_DEF" WHERE "EVN_NUM" = %s',
+        (evn,)
+    )
+    if not row:
+        return {}
+    return {
+        'per_calle':             str(row[0] or ''),
+        'per_barrio':            str(row[1] or ''),
+        '_prv_desc':             str(row[2] or ''),
+        '_loc_desc':             str(row[3] or ''),
+        'per_tipo_identidad_id': str(row[4] or ''),
+        'per_tipo_persona_id':   str(row[5] or ''),
+        'per_codigo_postal':     str(row[6] or ''),
+    }
+
+
 # ------------------------------------------------------------------ IMAGEN
 def get_imagen_evento(evn, static_url="/static/"):
     import os

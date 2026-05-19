@@ -96,6 +96,34 @@ function setLocked(locked) {
     });
 }
 
+function aplicarDefaults(defaults) {
+    if (!defaults) return;
+    ['per_calle','per_barrio','per_codigo_postal'].forEach(id => {
+        if (defaults[id]) {
+            const el = document.getElementById('f-' + id);
+            if (el && !el.value) el.value = defaults[id];
+        }
+    });
+    if (defaults._prv_desc) {
+        const prvHid = document.getElementById('f-per_provincia_id');
+        const prvTxt = document.getElementById('f-per_provincia_txt');
+        if (prvHid && !prvHid.value) { prvHid.value = defaults._prv_desc; prvTxt.value = defaults._prv_desc; }
+    }
+    if (defaults._loc_desc) {
+        const locHid = document.getElementById('f-per_localidad_id');
+        const locTxt = document.getElementById('f-per_localidad_txt');
+        if (locHid && !locHid.value) { locHid.value = defaults._loc_desc; locTxt.value = defaults._loc_desc; }
+    }
+    if (defaults.per_tipo_identidad_id) {
+        const el = document.getElementById('f-per_tipo_identidad_id');
+        if (el && !el.value) el.value = defaults.per_tipo_identidad_id;
+    }
+    if (defaults.per_tipo_persona_id) {
+        const el = document.getElementById('f-per_tipo_persona_id');
+        if (el && !el.value) el.value = defaults.per_tipo_persona_id;
+    }
+}
+
 function cargarPersona(persona) {
     document.getElementById('lbl-dni').textContent = persona.per_numero_identidad || '';
     CAMPOS_TEXTO.forEach(id => {
@@ -207,6 +235,7 @@ document.getElementById('btn-buscar-dni').addEventListener('click', async functi
         document.getElementById('sec-persona').style.display = '';
         mostrarErrorPer('');
         if (d.found) mostrarOk('Registro encontrado.');
+        else if (d.defaults) aplicarDefaults(d.defaults);
     } catch(e) { mostrarErrorDni('Error de conexión'); }
 });
 

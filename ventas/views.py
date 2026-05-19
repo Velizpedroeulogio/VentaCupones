@@ -260,8 +260,10 @@ def datos_buscar_api(request, evn):
         persona['_tid_desc'] = svc.get_nombre_by_id('app_gbl_tipoidentidad','tid_tipo_identidad',persona.get('per_tipo_identidad_id'))
         persona['_tpe_desc'] = svc.get_nombre_by_id('app_gbl_tipopersona', 'tpe_tipo_persona',  persona.get('per_tipo_persona_id'))
         return JsonResponse({"ok": True, "found": True, "persona": persona})
+    defaults = svc.get_evento_defaults(evn)
     return JsonResponse({"ok": True, "found": False,
-                         "persona": {"per_numero_identidad": str(dni)}})
+                         "persona": {"per_numero_identidad": str(dni)},
+                         "defaults": defaults})
 
 
 @csrf_exempt
