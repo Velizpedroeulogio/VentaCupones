@@ -413,7 +413,9 @@ def get_prd_desc(prd):
     return str(row[0]) if row else ''
 
 
-def get_movimientos(evn, usuario, prd, desde=None, hasta=None, fpgo=None, estd=None):
+PAGE_SIZE = 50
+
+def get_movimientos(evn, usuario, prd, desde=None, hasta=None, fpgo=None, estd=None, page=1):
     params = [evn, str(usuario), int(prd)]
     where_extra = ''
     if desde and hasta:
@@ -427,16 +429,23 @@ def get_movimientos(evn, usuario, prd, desde=None, hasta=None, fpgo=None, estd=N
     if estd:
         where_extra += ' AND M."MDP_ESTD" = %s'
         params.append(estd)
+    base_from = (
+        '  FROM "MDP_MOV" M'
+        '  LEFT JOIN "app_gbl_persona" P ON P."per_numero_identidad" = M."MDP_NID"'
+        ' WHERE M."EVN_NUM" = %s AND M."VEN_COD" = %s AND M."PRD_ID" = %s'
+        + where_extra
+    )
+    count_row = _fetchone('SELECT COUNT(*)' + base_from, params)
+    total = int(count_row[0]) if count_row else 0
+    offset = (max(1, page) - 1) * PAGE_SIZE
     rows = _fetchall(
         'SELECT M."MDP_FCHA", M."MDP_ACCI", M."MDP_CPTE", M."MDP_VALO",'
         '       M."MDP_ESTD", M."MDP_REFE", M."MDP_NID", M."MDP_FPGO",'
         '       COALESCE(P."per_nombre", \'\') AS per_nombre'
-        '  FROM "MDP_MOV" M'
-        '  LEFT JOIN "app_gbl_persona" P ON P."per_numero_identidad" = M."MDP_NID"'
-        ' WHERE M."EVN_NUM" = %s AND M."VEN_COD" = %s AND M."PRD_ID" = %s'
-        + where_extra +
-        ' ORDER BY M."MDP_FCHA", M."MDP_HORA"',
-        params
+        + base_from +
+        ' ORDER BY M."MDP_FCHA", M."MDP_HORA"'
+        ' LIMIT %s OFFSET %s',
+        params + [PAGE_SIZE, offset]
     )
     result = []
     for r in rows:
@@ -452,7 +461,7 @@ def get_movimientos(evn, usuario, prd, desde=None, hasta=None, fpgo=None, estd=N
             'fpgo':       str(r[7] or ''),
             'per_nombre': str(r[8] or ''),
         })
-    return result
+    return result, total
 
 
 # ------------------------------------------------------------------ PUBLICACIONES

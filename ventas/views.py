@@ -191,6 +191,10 @@ def movimientos_view(request, evn, prd):
     hasta_str = request.GET.get('hasta', hoy.strftime('%Y-%m-%d'))
     fpgo_filt = request.GET.get('fpgo', '')
     estd_filt = request.GET.get('estd', '')
+    try:
+        page = max(1, int(request.GET.get('page', 1)))
+    except Exception:
+        page = 1
 
     try:
         desde_date = date.fromisoformat(desde_str)
@@ -202,29 +206,35 @@ def movimientos_view(request, evn, prd):
         hasta_date = hoy
 
     usuario  = request.session.get("usuario", "")
-    movs_raw = svc.get_movimientos(
+    movs_raw, total = svc.get_movimientos(
         evn, usuario, prd,
         desde=desde_date, hasta=hasta_date,
         fpgo=fpgo_filt or None,
         estd=estd_filt or None,
+        page=page,
     )
     movimientos = [
         {**m, 'valo_fmt': _fmt_precio(m['valo'])}
         for m in movs_raw
     ]
+    total_pages = max(1, (total + svc.PAGE_SIZE - 1) // svc.PAGE_SIZE)
+    page = min(page, total_pages)
     prd_desc = svc.get_prd_desc(prd) or ('Ventas' if prd == 1 else 'Comisiones')
     return render(request, "ventas/movimientos.html", {
-        "evn":        evn,
-        "img_evento": svc.get_imagen_evento(evn),
-        "prd_desc":   prd_desc,
+        "evn":         evn,
+        "img_evento":  svc.get_imagen_evento(evn),
+        "prd_desc":    prd_desc,
         "movimientos": movimientos,
-        "desde":      desde_date.strftime('%Y-%m-%d'),
-        "hasta":      hasta_date.strftime('%Y-%m-%d'),
-        "fpgo_filt":  fpgo_filt,
-        "estd_filt":  estd_filt,
-        "fpgo_opts":  [('','Todos'),('E','Efectivo'),('T','Transf.'),
-                       ('C','T.Crd.'),('D','T.Déb.'),('Q','QR'),('blank','S/Pago')],
-        "estd_opts":  [('','Todos'),('I','Ingresada'),('R','Rendida')],
+        "desde":       desde_date.strftime('%Y-%m-%d'),
+        "hasta":       hasta_date.strftime('%Y-%m-%d'),
+        "fpgo_filt":   fpgo_filt,
+        "estd_filt":   estd_filt,
+        "page":        page,
+        "total_pages": total_pages,
+        "total":       total,
+        "fpgo_opts":   [('','Todos'),('E','Efectivo'),('T','Transf.'),
+                        ('C','T.Crd.'),('D','T.Déb.'),('Q','QR'),('blank','S/Pago')],
+        "estd_opts":   [('','Todos'),('I','Ingresada'),('R','Rendida')],
     })
 
 
