@@ -270,6 +270,38 @@ def get_textos_ayuda(codi):
     return ["No hay información disponible."]
 
 
+# ------------------------------------------------------------------ TOPE VENTAS
+def check_tope_ventas(evn, usuario):
+    """
+    Retorna {tope, count, bloqueado}.
+    tope=0 significa sin límite configurado.
+    Usa USR_TOPVTA del vendedor; si es 0 usa EVN_TOPVTA del evento.
+    """
+    row = _fetchone(
+        'SELECT "USR_TOPVTA" FROM "USR_VTAS"'
+        ' WHERE "USR_EVNX" = %s AND "USR_IDEU" = %s',
+        (evn, str(usuario or '').strip())
+    )
+    tope = int(row[0]) if row and row[0] else 0
+
+    if tope == 0:
+        row_evn = _fetchone(
+            'SELECT "EVN_TOPVTA" FROM "EVN_DEF" WHERE "EVN_NUM" = %s', (evn,)
+        )
+        tope = int(row_evn[0]) if row_evn and row_evn[0] else 0
+
+    if tope == 0:
+        return {'tope': 0, 'count': 0, 'bloqueado': False}
+
+    count_row = _fetchone(
+        'SELECT COUNT(*) FROM "MDP_MOV"'
+        ' WHERE "EVN_NUM" = %s AND "VEN_COD" = %s AND "PRD_ID" = 1 AND "MDP_ESTD" = \'I\'',
+        (evn, str(usuario or '').strip())
+    )
+    count = int(count_row[0]) if count_row else 0
+    return {'tope': tope, 'count': count, 'bloqueado': count >= tope}
+
+
 # ------------------------------------------------------------------ CUPONES
 def get_proximo_cupon(evn):
     row = _fetchone(

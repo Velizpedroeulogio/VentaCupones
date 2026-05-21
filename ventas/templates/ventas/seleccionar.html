@@ -12,6 +12,19 @@
 
     <div class="byl-title mt-2 mb-3">Selección de Cupón</div>
 
+    {% if tope_info.tope %}
+    <div class="byl-card mb-2" style="padding:8px 12px;{% if tope_info.bloqueado %}background:#fdecea;border-left:4px solid #d32f2f;{% else %}background:#fff8e1;border-left:4px solid #f9a825;{% endif %}font-size:13px;">
+        {% if tope_info.bloqueado %}
+        <strong style="color:#b71c1c;">&#9888; Ventas bloqueadas.</strong>
+        Tiene <strong>{{ tope_info.count }}</strong> de <strong>{{ tope_info.tope }}</strong> ventas permitidas sin rendir.
+        Debe realizar una rendición antes de continuar.
+        {% else %}
+        <strong style="color:#e65100;">&#9888; Atención:</strong>
+        Tiene <strong>{{ tope_info.count }}</strong> de <strong>{{ tope_info.tope }}</strong> ventas sin rendir.
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="byl-card" id="sec-seleccion">
 
         <!-- Picklist + Próximo Disponible -->
@@ -72,7 +85,8 @@ const URL_PRINCIPAL = "{% url 'ventas:principal' evn %}";
 const CSRF = "{{ csrf_token }}";
 const SAVED_CANTIDAD  = "{{ sel_cantidad }}";
 const SAVED_NUMS_PREF = {{ sel_nums_pref|safe }};
-const SAVED_CUPON_SEC = {% if cupon_sec %}{{ cupon_sec }}{% else %}0{% endif %};
+const SAVED_CUPON_SEC  = {% if cupon_sec %}{{ cupon_sec }}{% else %}0{% endif %};
+const TOPE_BLOQUEADO   = {% if tope_info.bloqueado %}true{% else %}false{% endif %};
 
 let secuencias = [];
 let currentIdx = 0;
@@ -164,11 +178,20 @@ function actualizarBtnProximo() {
     document.getElementById('btn-proximo').style.opacity = tienePreferidos ? '.4' : '1';
 }
 
+if (TOPE_BLOQUEADO) {
+    document.getElementById('btn-proximo').disabled = true;
+    document.getElementById('btn-proximo').style.opacity = '.4';
+    document.getElementById('btn-buscar').disabled = true;
+    document.getElementById('btn-buscar').style.opacity = '.4';
+    document.querySelectorAll('.num-pref').forEach(i => i.disabled = true);
+}
+
 document.querySelectorAll('.num-pref').forEach(inp => inp.addEventListener('input', actualizarBtnProximo));
 
-document.getElementById('btn-proximo').addEventListener('click', () => fetchSecuencias(null));
+document.getElementById('btn-proximo').addEventListener('click', () => { if (!TOPE_BLOQUEADO) fetchSecuencias(null); });
 
 document.getElementById('btn-buscar').addEventListener('click', function() {
+    if (TOPE_BLOQUEADO) return;
     mostrarError('');
     const vals = [...document.querySelectorAll('.num-pref')]
         .map(i => i.value.trim()).filter(v => v !== '');

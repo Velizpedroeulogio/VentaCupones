@@ -115,17 +115,20 @@ def seleccionar_view(request, evn):
     if pvt:
         cantidades = sorted(i for i in pvt["precios"] if i in pvt["rangos"])
 
-    cupon_sec   = request.session.get("cupon_sec")
-    nums_pref   = request.session.get("sel_nums_pref") or []
+    cupon_sec    = request.session.get("cupon_sec")
+    nums_pref    = request.session.get("sel_nums_pref") or []
     sel_cantidad = request.session.get("sel_cantidad") or ""
+    usuario      = request.session.get("usuario", "")
+    tope_info    = svc.check_tope_ventas(evn, usuario)
 
     return render(request, "ventas/seleccionar.html", {
-        "evn":          evn,
-        "img_evento":   svc.get_imagen_evento(evn),
-        "cantidades":   cantidades,
-        "cupon_sec":    cupon_sec,
-        "sel_cantidad": sel_cantidad,
+        "evn":           evn,
+        "img_evento":    svc.get_imagen_evento(evn),
+        "cantidades":    cantidades,
+        "cupon_sec":     cupon_sec,
+        "sel_cantidad":  sel_cantidad,
         "sel_nums_pref": nums_pref,
+        "tope_info":     tope_info,
     })
 
 
@@ -148,6 +151,18 @@ def proximo_api(request, evn):
 
     request.session["sel_cantidad"]  = cantidad
     request.session["sel_nums_pref"] = nums_pref
+
+    usuario   = request.session.get("usuario", "")
+    tope_info = svc.check_tope_ventas(evn, usuario)
+    if tope_info['bloqueado']:
+        return JsonResponse({
+            "ok": False,
+            "tope_superado": True,
+            "error": (
+                f"Tiene {tope_info['count']} ventas sin rendir "
+                f"(tope: {tope_info['tope']}). Debe rendir antes de continuar."
+            ),
+        })
 
     pvt = svc.get_pvt_sort(evn)
     if not pvt or cantidad not in pvt.get("rangos", {}):
