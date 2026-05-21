@@ -494,6 +494,27 @@ def qr_asignar_api(request, evn):
     })
 
 
+def qr_flyer_view(request, evn):
+    import base64, io, qrcode
+    url_qr = request.build_absolute_uri(f'/{evn}/qr/')
+    qr = qrcode.QRCode(version=3, error_correction=qrcode.constants.ERROR_CORRECT_H,
+                       box_size=10, border=2)
+    qr.add_data(url_qr)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#1565c0", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    return render(request, 'ventas/qr_flyer.html', {
+        'evn':         evn,
+        'evento_desc': svc.get_evento(evn),
+        'img_evento':  svc.get_imagen_evento(evn),
+        'msg_qr':      svc.get_evento_msgqr(evn).replace('\\n', '\n'),
+        'url_qr':      url_qr,
+        'qr_b64':      qr_b64,
+    })
+
+
 # ================================================================ FIN QR
 def datos_view(request, evn):
     if request.session.get("evn") != evn:

@@ -30,4 +30,5 @@ urlpatterns = [
     path("<int:evn>/qr/",                    views.qr_view,               name="qr"),
     path("<int:evn>/qr/buscar/",             views.qr_buscar_api,         name="qr_buscar"),
     path("<int:evn>/qr/asignar/",            views.qr_asignar_api,        name="qr_asignar"),
+    path("<int:evn>/qr/flyer/",              views.qr_flyer_view,         name="qr_flyer"),
 ]

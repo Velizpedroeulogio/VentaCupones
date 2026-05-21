@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flyer QR – {{ evento_desc }}</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.flyer {
+    width: 148mm;
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.flyer-header {
+    width: 100%;
+    background: #1565c0;
+    padding: 18px 20px 14px;
+    text-align: center;
+}
+.flyer-header .titulo {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffffff;
+    line-height: 1.2;
+    margin-bottom: 6px;
+}
+.flyer-header .subtitulo {
+    font-size: 13px;
+    color: #bbdefb;
+}
+
+.flyer-img {
+    width: 100%;
+}
+.flyer-img img {
+    width: 100%;
+    display: block;
+    max-height: 120px;
+    object-fit: cover;
+}
+
+.flyer-body {
+    width: 100%;
+    padding: 16px 20px 10px;
+    text-align: center;
+    flex: 1;
+}
+
+.msg-qr {
+    font-size: 13px;
+    color: #444;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    white-space: pre-line;
+}
+
+.qr-wrap {
+    display: inline-block;
+    border: 3px solid #1565c0;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fff;
+    margin-bottom: 10px;
+}
+.qr-wrap img {
+    display: block;
+    width: 180px;
+    height: 180px;
+}
+
+.url-text {
+    font-size: 10px;
+    color: #888;
+    word-break: break-all;
+    margin-bottom: 10px;
+}
+
+.instruccion {
+    font-size: 12px;
+    color: #1565c0;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.flyer-footer {
+    width: 100%;
+    background: #e3f2fd;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    color: #1565c0;
+    border-top: 2px solid #1565c0;
+}
+
+.btn-imprimir {
+    display: inline-block;
+    margin: 16px auto;
+    padding: 8px 24px;
+    background: #1565c0;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+@media print {
+    body {
+        background: white;
+        padding: 0;
+        display: block;
+    }
+    .flyer {
+        width: 148mm;
+        box-shadow: none;
+        border-radius: 0;
+        margin: 0 auto;
+    }
+    .no-print { display: none !important; }
+    @page { margin: 10mm; size: A5 portrait; }
+}
+</style>
+</head>
+<body>
+
+<div style="text-align:center;" class="no-print">
+    <button class="btn-imprimir" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+</div>
+
+<div class="flyer">
+
+    <div class="flyer-header">
+        <div class="titulo">¡Obtené tu Cupón Gratis!</div>
+        <div class="subtitulo">{{ evento_desc }}</div>
+    </div>
+
+    {% if img_evento %}
+    <div class="flyer-img">
+        <img src="{{ img_evento }}" alt="{{ evento_desc }}">
+    </div>
+    {% endif %}
+
+    <div class="flyer-body">
+
+        {% if msg_qr %}
+        <div class="msg-qr">{{ msg_qr }}</div>
+        {% endif %}
+
+        <div class="instruccion">Escaneá el código QR con tu celular</div>
+
+        <div class="qr-wrap">
+            <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR Code">
+        </div>
+
+        <div class="url-text">{{ url_qr }}</div>
+
+    </div>
+
+    <div class="flyer-footer">
+        {{ evento_desc }}
+    </div>
+
+</div>
+
+</body>
+</html>
