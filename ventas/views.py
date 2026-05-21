@@ -234,7 +234,8 @@ def movimientos_view(request, evn, prd):
     ]
     total_pages = max(1, (total + svc.PAGE_SIZE - 1) // svc.PAGE_SIZE)
     page = min(page, total_pages)
-    prd_desc = svc.get_prd_desc(prd) or ('Ventas' if prd == 1 else 'Comisiones')
+    _prd_fallback = {1: 'Ventas', 2: 'Rendiciones', 3: 'Comisiones'}
+    prd_desc = svc.get_prd_desc(prd) or _prd_fallback.get(prd, str(prd))
     return render(request, "ventas/movimientos.html", {
         "prd":         prd,
         "evn":         evn,
