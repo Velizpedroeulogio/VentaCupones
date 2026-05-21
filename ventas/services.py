@@ -501,13 +501,15 @@ def certificar_rendicion(evn, usuario_vend, nro_rend, ref_banco):
     with transaction.atomic():
         with connection.cursor() as cur:
             cur.execute(
-                'SELECT "ID" FROM "MDP_MOV"'
+                'SELECT "ID", "MDP_IREF" FROM "MDP_MOV"'
                 ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=2'
                 '   AND "MDP_CPTE"=%s AND "MDP_ESTD"=\'X\'',
                 (evn, str(usuario_vend or '').strip(), nro_fmt)
             )
-            if not cur.fetchone():
+            row = cur.fetchone()
+            if not row:
                 return False, 'Rendición no encontrada o ya certificada'
+            comision = float(row[1]) if row[1] is not None else 0.0
             cur.execute(
                 'UPDATE "MDP_MOV" SET "MDP_ESTD"=\'R\''
                 ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=1'
@@ -520,6 +522,17 @@ def certificar_rendicion(evn, usuario_vend, nro_rend, ref_banco):
                 '   AND "MDP_ESTD"=\'X\' AND "MDP_CPTE"=%s',
                 (str(ref_banco or '').strip(), evn,
                  str(usuario_vend or '').strip(), nro_fmt)
+            )
+            from datetime import date, datetime
+            hoy   = date.today()
+            ahora = datetime.now().time()
+            cur.execute(
+                'INSERT INTO "MDP_MOV"'
+                ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
+                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE","MDP_REFE")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (hoy, ahora, 3, evn, str(usuario_vend or '').strip(), 1,
+                 comision, 'R', 'R', nro_fmt, str(ref_banco or '').strip())
             )
             return True, 'OK'
 
@@ -571,11 +584,13 @@ def get_rendicion_data(evn, usuario, desde=None, hasta=None, fpgo=None):
             'per_nombre': str(r[5] or ''),
         })
     comision = round(total * pcjcom / 100, 2)
+    neto     = round(total - comision, 2)
     return {
         'ventas':       ventas,
         'total':        total,
         'pcjcom':       pcjcom,
         'comision':     comision,
+        'neto':         neto,
         'nro_rend':     nro_rend,
         'nro_rend_fmt': str(nro_rend).zfill(4),
     }
@@ -625,19 +640,21 @@ def confirmar_rendicion(evn, usuario, desde=None, hasta=None, fpgo=None):
             if count == 0:
                 return None
 
+            comision = round(total * pcjcom / 100, 2)
+            neto     = round(total - comision, 2)
             cur.execute(
-                'UPDATE "MDP_MOV" SET "MDP_ESTD"=%s,"MDP_REFE"=%s'
+                'UPDATE "MDP_MOV" SET "MDP_ESTD"=%s,"MDP_REFE"=%s,"MDP_IREF"="MDP_VALO"*%s/100.0'
                 ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=%s AND "MDP_ESTD"=%s'
                 + where_extra,
-                ['X', nro_fmt] + params_w
+                ['X', nro_fmt, pcjcom] + params_w
             )
             cur.execute(
                 'INSERT INTO "MDP_MOV"'
                 ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
-                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE")'
-                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                '  "MDP_VALO","MDP_IREF","MDP_ACCI","MDP_ESTD","MDP_CPTE")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
                 (hoy, ahora, 2, evn, str(usuario or ''), 1,
-                 total, 'R', 'X', nro_fmt)
+                 neto, comision, 'R', 'X', nro_fmt)
             )
             cur.execute(
                 'UPDATE "USR_VTAS" SET "USR_NRND"=%s'

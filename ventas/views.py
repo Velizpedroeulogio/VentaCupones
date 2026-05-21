@@ -250,7 +250,7 @@ def movimientos_view(request, evn, prd):
         "total":       total,
         "fpgo_opts":   [('','Todos'),('E','Efectivo'),('T','Transf.'),
                         ('C','T.Crd.'),('D','T.Déb.'),('Q','QR'),('blank','S/Pago')],
-        "estd_opts":   [('','Todos'),('I','Ingresada'),('R','Rendida')],
+        "estd_opts":   [('','Todos'),('I','Ingresada'),('X','En proceso'),('R','Rendida')],
     })
 
 
@@ -388,6 +388,7 @@ def rendicion_view(request, evn):
         "total_fmt":    _fmt_precio(data['total']),
         "pcjcom":       data['pcjcom'],
         "comision_fmt": _fmt_precio(data['comision']),
+        "neto_fmt":     _fmt_precio(data['neto']),
         "nro_rend_fmt": data['nro_rend_fmt'],
         "hay_ventas":   len(data['ventas']) > 0,
     })
