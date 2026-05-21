@@ -112,7 +112,7 @@ def validate_user(evn, usuario, pwd):
     Devuelve (ok, nombre, mensaje_error).
     """
     row = _fetchone(
-        'SELECT "USR_NOMB","USR_PWDX","USR_ESTD","USR_FCHD","USR_FCHH"'
+        'SELECT "USR_NOMB","USR_PWDX","USR_ESTD","USR_FCHD","USR_FCHH","USR_TUSR"'
         ' FROM "USR_VTAS"'
         ' WHERE "USR_EVNX" = %s AND "USR_IDEU" = %s',
         (evn, str(usuario or "").strip())
@@ -120,7 +120,10 @@ def validate_user(evn, usuario, pwd):
     if not row:
         return False, "", "Usuario no encontrado"
 
-    nombre, pwd_enc, estd, fchd, fchh = row
+    nombre, pwd_enc, estd, fchd, fchh, tusr = row
+
+    if str(tusr or '').strip() != 'V':
+        return False, "", "No es usuario vendedor"
 
     if estd != "A":
         return False, "", "Usuario no habilitado"
