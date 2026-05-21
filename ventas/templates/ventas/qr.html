@@ -12,12 +12,7 @@
 
     <!-- PASO 1: Ingreso de DNI -->
     <div id="step-dni">
-        <div class="byl-title mt-2 mb-2">{{ evento_desc }}</div>
-        {% if msg_qr %}
-        <div class="byl-card mb-3" style="background:#fff8e1;border-left:4px solid #f9a825;font-size:13px;color:#555;padding:10px 14px;">
-            {{ msg_qr }}
-        </div>
-        {% endif %}
+        <div class="byl-title mt-2 mb-3">{{ evento_desc }}</div>
         <div class="byl-card">
             <div class="mb-3">
                 <label class="byl-label">Número de Documento</label>
@@ -62,6 +57,9 @@
         <div style="text-align:center;margin-top:12px;margin-bottom:12px;">
             <div style="font-size:13px;color:#666;margin-bottom:4px;">Tu Cupón</div>
             <div style="font-size:48px;font-weight:bold;color:var(--byl-accent);letter-spacing:4px;" id="cupon-num">000000</div>
+            {% if msg_qr %}
+            <div style="font-size:13px;color:#555;margin-top:6px;margin-bottom:2px;">{{ msg_qr }}</div>
+            {% endif %}
             <div style="font-size:12px;color:#888;" id="cupon-cant"></div>
         </div>
 
@@ -131,8 +129,9 @@ document.getElementById('btn-buscar').addEventListener('click', async function()
         const setField = (id, val) => {
             const el = document.getElementById(id);
             el.value    = val || '';
-            el.readOnly = ro;
+            el.disabled = ro;
             el.style.background = bg;
+            el.style.color = ro ? '#555' : '';
         };
         setField('f-nombre', d.nombre);
         setField('f-fnac',   d.fecha_nac);
@@ -236,9 +235,13 @@ document.getElementById('btn-nuevo').addEventListener('click', function() {
     _nid   = null;
     _found = false;
     document.getElementById('f-dni').value    = '';
-    document.getElementById('f-nombre').value = '';
-    document.getElementById('f-fnac').value   = '';
-    document.getElementById('f-cel').value    = '';
+    ['f-nombre','f-fnac','f-cel'].forEach(id => {
+        const el = document.getElementById(id);
+        el.value    = '';
+        el.disabled = false;
+        el.style.background = '';
+        el.style.color = '';
+    });
     showMsg('msg-dni', '');
     showMsg('msg-persona', '');
     showStep('step-dni');
