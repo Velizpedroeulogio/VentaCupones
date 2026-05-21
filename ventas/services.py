@@ -337,6 +337,7 @@ def get_cartones_cupon(evn, sec):
     return [
         {
             "sub":  str(r[2] or ""),
+            "mtz":  str(r[3] or ""),
             "ser":  str(r[4] or ""),
             "num":  str(r[5] or ""),
             "lis":  _decodificar_lis(str(r[6] or ""), r[5] or 1),

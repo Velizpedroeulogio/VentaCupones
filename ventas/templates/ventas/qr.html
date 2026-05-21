@@ -205,7 +205,10 @@ function renderCartones(cartones) {
         const div = document.createElement('div');
         div.className = 'byl-card';
         div.style.cssText = 'padding:8px 10px;margin-bottom:8px;';
-        div.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:6px;">Cartón ${idx+1} — Ser. ${car.ser} N° ${car.num}</div>
+        const mtzStr = String(car.mtz||'').padStart(2,'0');
+        const serStr = String(car.ser||'').padStart(6,'0');
+        const numStr = String(car.num||'');
+        div.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:6px;">Cartón ${idx+1} — ${mtzStr}-${serStr}-${numStr}</div>
             <div style="display:flex;flex-wrap:wrap;gap:4px;">${
                 nums.map(n => `<span style="display:inline-block;min-width:28px;text-align:center;
                     background:#e8f4fd;border-radius:4px;padding:3px 4px;font-size:13px;font-weight:bold;color:#1565c0;">${n}</span>`
