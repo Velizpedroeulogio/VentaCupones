@@ -453,7 +453,13 @@ def qr_buscar_api(request, evn):
         return JsonResponse({'ok': False, 'error': 'Ingrese el DNI'})
     persona = svc.get_persona(nid)
     if persona:
-        return JsonResponse({'ok': True, 'found': True, 'nombre': persona.get('per_nombre', '')})
+        return JsonResponse({
+            'ok':       True,
+            'found':    True,
+            'nombre':   persona.get('per_nombre', ''),
+            'fecha_nac': persona.get('per_fecha_nac', ''),
+            'celular':  persona.get('per_celular', ''),
+        })
     return JsonResponse({'ok': True, 'found': False})
 
 

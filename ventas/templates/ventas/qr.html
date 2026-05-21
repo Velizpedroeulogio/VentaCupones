@@ -121,10 +121,10 @@ document.getElementById('btn-buscar').addEventListener('click', async function()
         if (!d.ok) { showMsg('msg-dni', d.error || 'Error'); return; }
         _nid   = nid;
         _found = d.found;
-        document.getElementById('f-nombre').value    = d.found ? d.nombre : '';
-        document.getElementById('f-nombre').readOnly = d.found;
-        document.getElementById('f-nombre').style.background = d.found ? '#f5f5f5' : '';
-        document.getElementById('sec-nuevos').style.display  = d.found ? 'none' : '';
+        document.getElementById('f-nombre').value = d.found ? d.nombre : '';
+        document.getElementById('f-fnac').value   = d.found ? (d.fecha_nac || '') : '';
+        document.getElementById('f-cel').value    = d.found ? (d.celular  || '') : '';
+        document.getElementById('sec-nuevos').style.display = '';
         showStep('step-persona');
     } catch(e) {
         showMsg('msg-dni', 'Error de conexión');
@@ -145,9 +145,9 @@ document.getElementById('btn-volver').addEventListener('click', function() {
 
 // ---- Paso 2: Aceptar ----
 document.getElementById('btn-aceptar').addEventListener('click', async function() {
-    const nombre   = document.getElementById('f-nombre').value.trim();
-    const fecha_nac = _found ? '' : document.getElementById('f-fnac').value.trim();
-    const celular  = _found ? '' : document.getElementById('f-cel').value.trim();
+    const nombre    = document.getElementById('f-nombre').value.trim();
+    const fecha_nac = document.getElementById('f-fnac').value.trim();
+    const celular   = document.getElementById('f-cel').value.trim();
 
     if (!nombre) { showMsg('msg-persona', 'Ingrese el Nombre y Apellido'); return; }
     if (!_found && !fecha_nac) { showMsg('msg-persona', 'Ingrese la Fecha de Nacimiento'); return; }
