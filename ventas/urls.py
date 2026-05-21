@@ -20,4 +20,6 @@ urlpatterns = [
     path("<int:evn>/datos/lookup/",          views.datos_lookup_api,  name="datos_lookup"),
     path("<int:evn>/confirmar-venta/",       views.confirmar_venta_api, name="confirmar_venta"),
     path("<int:evn>/movimientos/<int:prd>/", views.movimientos_view,    name="movimientos"),
+    path("<int:evn>/rendicion/",             views.rendicion_view,        name="rendicion"),
+    path("<int:evn>/rendicion/confirmar/",   views.rendicion_confirmar_api, name="rendicion_confirmar"),
 ]

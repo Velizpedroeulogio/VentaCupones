@@ -236,6 +236,7 @@ def movimientos_view(request, evn, prd):
     page = min(page, total_pages)
     prd_desc = svc.get_prd_desc(prd) or ('Ventas' if prd == 1 else 'Comisiones')
     return render(request, "ventas/movimientos.html", {
+        "prd":         prd,
         "evn":         evn,
         "img_evento":  svc.get_imagen_evento(evn),
         "prd_desc":    prd_desc,
@@ -251,6 +252,92 @@ def movimientos_view(request, evn, prd):
                         ('C','T.Crd.'),('D','T.Déb.'),('Q','QR'),('blank','S/Pago')],
         "estd_opts":   [('','Todos'),('I','Ingresada'),('R','Rendida')],
     })
+
+
+def rendicion_view(request, evn):
+    if request.session.get("evn") != evn:
+        return redirect("ventas:login", evn=evn)
+
+    from datetime import date
+    usuario   = request.session.get("usuario", "")
+    nombre    = request.session.get("nombre", "")
+    desde_str = request.GET.get('desde', '')
+    hasta_str = request.GET.get('hasta', '')
+    fpgo_filt = request.GET.get('fpgo', '')
+
+    desde_date = hasta_date = None
+    try:
+        if desde_str:
+            desde_date = date.fromisoformat(desde_str)
+        if hasta_str:
+            hasta_date = date.fromisoformat(hasta_str)
+    except Exception:
+        pass
+
+    data = svc.get_rendicion_data(
+        evn, usuario,
+        desde=desde_date, hasta=hasta_date,
+        fpgo=fpgo_filt or None,
+    )
+    for v in data['ventas']:
+        v['valo_fmt'] = _fmt_precio(v['valo'])
+
+    fpgo_labels = {
+        'E': 'Efectivo', 'T': 'Transferencia', 'C': 'T. Crédito',
+        'D': 'T. Débito', 'Q': 'QR', 'blank': 'Sin pago', '': 'Todos',
+    }
+    return render(request, "ventas/rendicion.html", {
+        "evn":          evn,
+        "evento_desc":  svc.get_evento(evn),
+        "usuario":      usuario,
+        "nombre":       nombre,
+        "desde":        desde_str,
+        "hasta":        hasta_str,
+        "fpgo_filt":    fpgo_filt,
+        "fpgo_label":   fpgo_labels.get(fpgo_filt, fpgo_filt),
+        "ventas":       data['ventas'],
+        "total_fmt":    _fmt_precio(data['total']),
+        "pcjcom":       data['pcjcom'],
+        "comision_fmt": _fmt_precio(data['comision']),
+        "nro_rend_fmt": data['nro_rend_fmt'],
+        "hay_ventas":   len(data['ventas']) > 0,
+    })
+
+
+@csrf_exempt
+def rendicion_confirmar_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "JSON inválido"})
+
+    from datetime import date
+    usuario   = request.session.get("usuario", "")
+    desde_str = body.get('desde', '')
+    hasta_str = body.get('hasta', '')
+    fpgo      = body.get('fpgo', '')
+
+    desde_date = hasta_date = None
+    try:
+        if desde_str:
+            desde_date = date.fromisoformat(desde_str)
+        if hasta_str:
+            hasta_date = date.fromisoformat(hasta_str)
+    except Exception:
+        pass
+
+    nro = svc.confirmar_rendicion(
+        evn, usuario,
+        desde=desde_date, hasta=hasta_date,
+        fpgo=fpgo or None,
+    )
+    if nro is None:
+        return JsonResponse({"ok": False, "error": "Sin ventas para rendir con el filtro aplicado"})
+    return JsonResponse({"ok": True, "nro_rend": nro})
 
 
 def datos_view(request, evn):

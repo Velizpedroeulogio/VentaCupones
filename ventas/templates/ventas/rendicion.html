@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Liquidación {{ nro_rend_fmt }}{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+    .no-print { display: none !important; }
+    .byl-pad  { padding: 0 !important; }
+    body      { font-size: 11px; }
+}
+</style>
+
+<div class="byl-pad">
+
+    <!-- Encabezado del documento -->
+    <div style="border:1px solid #ccc;border-radius:6px;padding:10px 14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;">
+            <div>
+                <div style="font-size:15px;font-weight:bold;color:#333;">Liquidación de Rendición</div>
+                <div style="font-size:12px;color:#555;margin-top:2px;">{{ evento_desc }}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:18px;font-weight:bold;color:var(--byl-accent);">N° {{ nro_rend_fmt }}</div>
+                <div style="font-size:11px;color:#777;">Vendedor: {{ usuario }} — {{ nombre }}</div>
+            </div>
+        </div>
+        <div style="font-size:11px;color:#777;margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;">
+            {% if desde %}<span>Período: {{ desde }} al {{ hasta }}</span>{% endif %}
+            {% if fpgo_label %}<span>Forma de pago: {{ fpgo_label }}</span>{% endif %}
+            <span>Estado: Ingresadas (I)</span>
+        </div>
+    </div>
+
+    {% if hay_ventas %}
+
+    <!-- Tabla de ventas -->
+    <div class="byl-card" style="padding:0;overflow:hidden;margin-bottom:10px;">
+        <div style="background:#f0f0f0;padding:5px 10px;display:grid;grid-template-columns:60px 70px 60px 1fr 90px;column-gap:6px;font-size:11px;font-weight:bold;color:#444;">
+            <span>Fecha</span>
+            <span>Cupón</span>
+            <span>F.Pago</span>
+            <span>Comprador</span>
+            <span style="text-align:right;">Importe</span>
+        </div>
+        {% for v in ventas %}
+        <div style="border-top:1px solid #eee;padding:4px 10px;display:grid;grid-template-columns:60px 70px 60px 1fr 90px;column-gap:6px;font-size:12px;">
+            <span>{{ v.fecha_fmt }}</span>
+            <span>{{ v.cpte }}</span>
+            <span style="color:#666;">{{ v.fpgo }}</span>
+            <span style="color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ v.per_nombre }}</span>
+            <span style="text-align:right;white-space:nowrap;">{{ v.valo_fmt }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Totales -->
+    <div class="byl-card" style="padding:8px 14px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:flex-end;">
+            <table style="font-size:13px;border-collapse:collapse;min-width:240px;">
+                <tr>
+                    <td style="padding:3px 12px 3px 0;color:#555;">Total ventas ({{ ventas|length }} cupones)</td>
+                    <td style="text-align:right;font-weight:bold;">{{ total_fmt }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:3px 12px 3px 0;color:#555;">Comisión ({{ pcjcom }}%)</td>
+                    <td style="text-align:right;color:var(--byl-accent);font-weight:bold;">{{ comision_fmt }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="d-flex gap-2 flex-wrap no-print">
+        <button class="byl-btn" onclick="window.print()">Imprimir / PDF</button>
+        <button class="byl-btn" id="btn-confirmar" style="background:var(--byl-accent);color:white;">Confirmar Rendición</button>
+        <a class="byl-btn" id="btn-cancelar" href="{% url 'ventas:movimientos' evn 1 %}?desde={{ desde }}&hasta={{ hasta }}&fpgo={{ fpgo_filt }}">Cancelar</a>
+    </div>
+
+    <div id="msg-result" style="display:none;margin-top:10px;font-size:13px;"></div>
+
+    {% else %}
+    <div class="byl-card" style="font-size:13px;color:#999;">No hay ventas en estado I con el filtro aplicado.</div>
+    <div class="mt-2 no-print">
+        <a class="byl-btn" href="{% url 'ventas:movimientos' evn 1 %}?desde={{ desde }}&hasta={{ hasta }}&fpgo={{ fpgo_filt }}">Volver</a>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+const URL_CONFIRMAR  = "{% url 'ventas:rendicion_confirmar' evn %}";
+const URL_MOVIMIENTOS = "{% url 'ventas:movimientos' evn 1 %}?desde={{ desde }}&hasta={{ hasta }}&fpgo={{ fpgo_filt }}";
+const CSRF = "{{ csrf_token }}";
+
+document.getElementById('btn-confirmar') && document.getElementById('btn-confirmar').addEventListener('click', async function() {
+    this.disabled = true;
+    this.textContent = 'Procesando...';
+    const msg = document.getElementById('msg-result');
+    try {
+        const r = await fetch(URL_CONFIRMAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                desde: "{{ desde }}",
+                hasta: "{{ hasta }}",
+                fpgo:  "{{ fpgo_filt }}"
+            })
+        });
+        const d = await r.json();
+        if (d.ok) {
+            msg.style.display = '';
+            msg.style.color   = '#2e7d32';
+            msg.textContent   = `Rendición N° ${d.nro_rend} confirmada. Redirigiendo...`;
+            document.getElementById('btn-cancelar').style.display = 'none';
+            setTimeout(() => window.location.href = URL_MOVIMIENTOS, 1500);
+        } else {
+            msg.style.display = '';
+            msg.style.color   = '#c62828';
+            msg.textContent   = d.error || 'Error al confirmar';
+            this.disabled     = false;
+            this.textContent  = 'Confirmar Rendición';
+        }
+    } catch(e) {
+        msg.style.display = '';
+        msg.style.color   = '#c62828';
+        msg.textContent   = 'Error de conexión';
+        this.disabled     = false;
+        this.textContent  = 'Confirmar Rendición';
+    }
+});
+</script>
+{% endblock %}

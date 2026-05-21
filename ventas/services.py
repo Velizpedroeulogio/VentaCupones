@@ -439,6 +439,129 @@ def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=
             return True
 
 
+# ------------------------------------------------------------------ RENDICION
+def get_rendicion_data(evn, usuario, desde=None, hasta=None, fpgo=None):
+    """Datos de la liquidación previa: ventas I filtradas + totales + comisión."""
+    row = _fetchone(
+        'SELECT "USR_PCJCOM","USR_NRND" FROM "USR_VTAS"'
+        ' WHERE "USR_EVNX" = %s AND "USR_IDEU" = %s',
+        (evn, str(usuario or '').strip())
+    )
+    pcjcom   = float(row[0]) if row and row[0] else 0.0
+    nro_rend = (int(row[1]) if row and row[1] else 0) + 1
+
+    params = [evn, str(usuario), 1, 'I']
+    where_extra = ''
+    if desde and hasta:
+        where_extra += ' AND M."MDP_FCHA" BETWEEN %s AND %s'
+        params += [desde, hasta]
+    if fpgo == 'blank':
+        where_extra += ' AND (M."MDP_FPGO" IS NULL OR M."MDP_FPGO" = \'\')'
+    elif fpgo:
+        where_extra += ' AND M."MDP_FPGO" = %s'
+        params.append(fpgo)
+
+    rows = _fetchall(
+        'SELECT M."MDP_FCHA", M."MDP_CPTE", M."MDP_FPGO", M."MDP_VALO",'
+        '       M."MDP_NID", COALESCE(P."per_nombre", \'\') AS per_nombre'
+        '  FROM "MDP_MOV" M'
+        '  LEFT JOIN "app_gbl_persona" P ON P."per_numero_identidad" = M."MDP_NID"'
+        ' WHERE M."EVN_NUM" = %s AND M."VEN_COD" = %s AND M."PRD_ID" = %s AND M."MDP_ESTD" = %s'
+        + where_extra +
+        ' ORDER BY M."MDP_FCHA", M."MDP_HORA"',
+        params
+    )
+    ventas = []
+    total  = 0.0
+    for r in rows:
+        valo = float(r[3]) if r[3] is not None else 0.0
+        total += valo
+        fcha  = r[0]
+        ventas.append({
+            'fecha_fmt':  fcha.strftime('%d.%m.%y') if fcha else '',
+            'cpte':       str(r[1] or ''),
+            'fpgo':       str(r[2] or ''),
+            'valo':       valo,
+            'nid':        str(r[4] or ''),
+            'per_nombre': str(r[5] or ''),
+        })
+    comision = round(total * pcjcom / 100, 2)
+    return {
+        'ventas':       ventas,
+        'total':        total,
+        'pcjcom':       pcjcom,
+        'comision':     comision,
+        'nro_rend':     nro_rend,
+        'nro_rend_fmt': str(nro_rend).zfill(4),
+    }
+
+
+def confirmar_rendicion(evn, usuario, desde=None, hasta=None, fpgo=None):
+    """
+    Confirma la rendición en una transacción atómica:
+    actualiza ventas I→X con MDP_REFE=nro, graba PRD=2, incrementa USR_NRND.
+    Retorna nro_rend_fmt o None si no había ventas.
+    """
+    from datetime import date, datetime
+    hoy   = date.today()
+    ahora = datetime.now().time()
+
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            cur.execute(
+                'SELECT "USR_NRND","USR_PCJCOM" FROM "USR_VTAS"'
+                ' WHERE "USR_EVNX" = %s AND "USR_IDEU" = %s FOR UPDATE',
+                (evn, str(usuario or '').strip())
+            )
+            row      = cur.fetchone()
+            nro_rend = (int(row[0]) if row and row[0] else 0) + 1
+            pcjcom   = float(row[1]) if row and row[1] else 0.0
+            nro_fmt  = str(nro_rend).zfill(4)
+
+            params_w = [evn, str(usuario), 1, 'I']
+            where_extra = ''
+            if desde and hasta:
+                where_extra += ' AND "MDP_FCHA" BETWEEN %s AND %s'
+                params_w += [desde, hasta]
+            if fpgo == 'blank':
+                where_extra += ' AND ("MDP_FPGO" IS NULL OR "MDP_FPGO" = \'\')'
+            elif fpgo:
+                where_extra += ' AND "MDP_FPGO" = %s'
+                params_w.append(fpgo)
+
+            cur.execute(
+                'SELECT COUNT(*), COALESCE(SUM("MDP_VALO"),0) FROM "MDP_MOV"'
+                ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=%s AND "MDP_ESTD"=%s'
+                + where_extra, params_w
+            )
+            r2    = cur.fetchone()
+            count = int(r2[0]) if r2 else 0
+            total = float(r2[1]) if r2 else 0.0
+            if count == 0:
+                return None
+
+            cur.execute(
+                'UPDATE "MDP_MOV" SET "MDP_ESTD"=%s,"MDP_REFE"=%s'
+                ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=%s AND "MDP_ESTD"=%s'
+                + where_extra,
+                ['X', nro_fmt] + params_w
+            )
+            cur.execute(
+                'INSERT INTO "MDP_MOV"'
+                ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
+                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (hoy, ahora, 2, evn, str(usuario or ''), 1,
+                 total, 'R', 'X', nro_fmt)
+            )
+            cur.execute(
+                'UPDATE "USR_VTAS" SET "USR_NRND"=%s'
+                ' WHERE "USR_EVNX"=%s AND "USR_IDEU"=%s',
+                (nro_rend, evn, str(usuario or '').strip())
+            )
+            return nro_fmt
+
+
 # ------------------------------------------------------------------ MOVIMIENTOS
 def get_prd_desc(prd):
     row = _fetchone('SELECT "PRD_DSCR" FROM "PRD_MOV" WHERE "ID" = %s', (int(prd),))

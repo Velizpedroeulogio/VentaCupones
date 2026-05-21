@@ -107,6 +107,10 @@
                style="font-size:11px;padding:3px 7px;{% if estd_filt == opt_val %}background:var(--byl-accent);color:white;{% endif %}">{{ opt_lbl }}</a>
             {% endfor %}
         </div>
+        {% if prd == 1 %}
+        <a class="byl-btn" style="background:var(--byl-accent);color:white;"
+           href="{% url 'ventas:rendicion' evn %}?desde={{ desde }}&hasta={{ hasta }}&fpgo={{ fpgo_filt }}">Rendir</a>
+        {% endif %}
         <a class="byl-btn" href="{% url 'ventas:principal' evn %}">Volver</a>
     </div>
 
