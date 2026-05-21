@@ -501,7 +501,7 @@ def certificar_rendicion(evn, usuario_vend, nro_rend, ref_banco):
     with transaction.atomic():
         with connection.cursor() as cur:
             cur.execute(
-                'SELECT id FROM "MDP_MOV"'
+                'SELECT "ID" FROM "MDP_MOV"'
                 ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=2'
                 '   AND "MDP_CPTE"=%s AND "MDP_ESTD"=\'X\'',
                 (evn, str(usuario_vend or '').strip(), nro_fmt)
