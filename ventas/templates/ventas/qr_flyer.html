@@ -148,16 +148,16 @@ body {
 
 <div class="flyer">
 
-    <div class="flyer-header">
-        <div class="titulo">¡Obtené tu Cupón Gratis!</div>
-        <div class="subtitulo">{{ evento_desc }}</div>
-    </div>
-
     {% if img_evento %}
     <div class="flyer-img">
         <img src="{{ img_evento }}" alt="{{ evento_desc }}">
     </div>
     {% endif %}
+
+    <div class="flyer-header">
+        <div class="titulo">¡Obtené tu Cupón Gratis!</div>
+        <div class="subtitulo">{{ evento_desc }}</div>
+    </div>
 
     <div class="flyer-body">
 
