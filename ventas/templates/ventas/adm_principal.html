@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Rendiciones – {{ evento_desc }}{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <!-- Encabezado -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;" class="mt-2 mb-2">
+        <div class="byl-title">Rendiciones – {{ evento_desc }}</div>
+        <div style="font-size:12px;color:#666;">
+            {{ nombre }} &nbsp;|&nbsp;
+            <a href="{% url 'ventas:adm_logout' evn %}" style="color:var(--byl-accent);">Salir</a>
+        </div>
+    </div>
+
+    <!-- Filtro de período -->
+    <form method="get" action="" class="mb-2">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:#555;">
+            <span>Desde:</span>
+            <input type="date" name="desde" value="{{ desde }}"
+                   style="border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:12px;">
+            <span>Hasta:</span>
+            <input type="date" name="hasta" value="{{ hasta }}"
+                   style="border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:12px;">
+            <button type="submit" class="byl-btn" style="font-size:12px;padding:3px 8px;">Aplicar</button>
+        </div>
+    </form>
+
+    <!-- Tabla de rendiciones -->
+    {% if rendiciones %}
+    <div class="byl-card" style="padding:0;overflow:hidden;margin-bottom:12px;">
+        <div style="background:#f0f0f0;padding:6px 10px;display:grid;grid-template-columns:60px 80px 50px 80px 50px 1fr;column-gap:6px;font-size:11px;font-weight:bold;color:#444;">
+            <span>Fecha</span>
+            <span>Vendedor</span>
+            <span>N°Rend</span>
+            <span style="text-align:right;">Total</span>
+            <span>Estado</span>
+            <span>Ref.Banco</span>
+        </div>
+        {% for r in rendiciones %}
+        <div id="row-{{ r.ven_cod }}-{{ r.cpte }}"
+             style="border-top:1px solid #eee;padding:5px 10px;display:grid;grid-template-columns:60px 80px 50px 80px 50px 1fr;column-gap:6px;font-size:12px;{% if r.estd == 'R' %}background:#f1f8f1;{% endif %}">
+            <span>{{ r.fecha_fmt }}</span>
+            <span title="{{ r.usr_nomb }}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.ven_cod }}</span>
+            <span>{{ r.cpte }}</span>
+            <span style="text-align:right;white-space:nowrap;">{{ r.valo_fmt }}</span>
+            <span style="{% if r.estd == 'R' %}color:#2e7d32;font-weight:bold;{% else %}color:#e65100;{% endif %}">{{ r.estd }}</span>
+            <span style="color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.refe }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="byl-card" style="font-size:13px;color:#999;margin-bottom:12px;">Sin rendiciones en el período.</div>
+    {% endif %}
+
+    <!-- Panel de certificación -->
+    <div class="byl-card" style="padding:10px 14px;">
+        <div style="font-size:12px;font-weight:bold;color:#444;margin-bottom:8px;">Certificar Rendición</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+            <div>
+                <div style="font-size:11px;color:#666;margin-bottom:2px;">Vendedor</div>
+                <input id="f-ven" type="text" placeholder="Código" autocomplete="off"
+                       style="width:90px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:13px;">
+            </div>
+            <div>
+                <div style="font-size:11px;color:#666;margin-bottom:2px;">N° Rendición</div>
+                <input id="f-nro" type="text" placeholder="0001" autocomplete="off"
+                       style="width:70px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:13px;">
+            </div>
+            <div>
+                <div style="font-size:11px;color:#666;margin-bottom:2px;">Ref. Banco / Comprobante</div>
+                <input id="f-ref" type="text" placeholder="Nro. operación" autocomplete="off"
+                       style="width:160px;border:1px solid #ccc;border-radius:4px;padding:4px 6px;font-size:13px;">
+            </div>
+            <button id="btn-certificar" class="byl-btn" disabled
+                    style="opacity:.4;background:var(--byl-accent);color:white;padding:5px 14px;">
+                Confirmar
+            </button>
+        </div>
+        <div id="msg-cert" style="display:none;font-size:12px;margin-top:8px;"></div>
+    </div>
+
+</div>
+
+<script>
+const URL_CERTIFICAR = "{% url 'ventas:adm_certificar' evn %}";
+const CSRF = "{{ csrf_token }}";
+
+function checkFields() {
+    const ok = document.getElementById('f-ven').value.trim() &&
+               document.getElementById('f-nro').value.trim() &&
+               document.getElementById('f-ref').value.trim();
+    const btn = document.getElementById('btn-certificar');
+    btn.disabled     = !ok;
+    btn.style.opacity = ok ? '1' : '.4';
+}
+
+['f-ven','f-nro','f-ref'].forEach(id =>
+    document.getElementById(id).addEventListener('input', checkFields)
+);
+
+document.getElementById('btn-certificar').addEventListener('click', async function() {
+    const usuario_vend = document.getElementById('f-ven').value.trim();
+    const nro_rend     = document.getElementById('f-nro').value.trim();
+    const ref_banco    = document.getElementById('f-ref').value.trim();
+    const msg          = document.getElementById('msg-cert');
+
+    this.disabled    = true;
+    this.textContent = 'Procesando...';
+    msg.style.display = 'none';
+
+    try {
+        const r = await fetch(URL_CERTIFICAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({usuario_vend, nro_rend, ref_banco})
+        });
+        const d = await r.json();
+        msg.style.display = '';
+        if (d.ok) {
+            msg.style.color   = '#2e7d32';
+            msg.textContent   = `Rendición ${nro_rend} del vendedor ${usuario_vend} certificada correctamente.`;
+            // Actualizar la fila en la tabla sin recargar
+            const rowId = `row-${usuario_vend}-${nro_rend.padStart(4,'0')}`;
+            const row   = document.getElementById(rowId);
+            if (row) {
+                row.style.background = '#f1f8f1';
+                const cells = row.querySelectorAll('span');
+                if (cells[4]) { cells[4].textContent = 'R'; cells[4].style.color = '#2e7d32'; cells[4].style.fontWeight = 'bold'; }
+                if (cells[5]) cells[5].textContent = ref_banco;
+            }
+            document.getElementById('f-ven').value = '';
+            document.getElementById('f-nro').value = '';
+            document.getElementById('f-ref').value = '';
+            checkFields();
+        } else {
+            msg.style.color  = '#c62828';
+            msg.textContent  = d.error || 'Error al certificar';
+        }
+    } catch(e) {
+        msg.style.display = '';
+        msg.style.color   = '#c62828';
+        msg.textContent   = 'Error de conexión';
+    }
+    this.textContent = 'Confirmar';
+});
+</script>
+{% endblock %}

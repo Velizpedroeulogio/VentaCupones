@@ -254,6 +254,95 @@ def movimientos_view(request, evn, prd):
     })
 
 
+# ================================================================ ADMIN
+def adm_login_view(request, evn):
+    return render(request, "ventas/adm_login.html", {
+        "evn":         evn,
+        "evento_desc": svc.get_evento(evn),
+        "img_evento":  svc.get_imagen_evento(evn),
+    })
+
+
+@csrf_exempt
+def adm_login_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "JSON inválido"}, status=400)
+    usuario = str(body.get("usuario", "")).strip()
+    pwd     = str(body.get("pwd", "")).strip()
+    if not usuario or not pwd:
+        return JsonResponse({"ok": False, "error": "Datos incompletos"})
+    ok, nombre, error = svc.validate_admin_user(evn, usuario, pwd)
+    if not ok:
+        return JsonResponse({"ok": False, "error": error})
+    request.session["adm_evn"]     = evn
+    request.session["adm_usuario"] = usuario
+    request.session["adm_nombre"]  = nombre
+    return JsonResponse({"ok": True, "nombre": nombre})
+
+
+def adm_principal_view(request, evn):
+    if request.session.get("adm_evn") != evn:
+        return redirect("ventas:adm_login", evn=evn)
+
+    from datetime import date, timedelta
+    hoy  = date.today()
+    ayer = hoy - timedelta(days=1)
+
+    desde_str = request.GET.get('desde', ayer.strftime('%Y-%m-%d'))
+    hasta_str = request.GET.get('hasta', hoy.strftime('%Y-%m-%d'))
+    try:
+        desde_date = date.fromisoformat(desde_str)
+    except Exception:
+        desde_date = ayer
+    try:
+        hasta_date = date.fromisoformat(hasta_str)
+    except Exception:
+        hasta_date = hoy
+
+    rendiciones_raw = svc.get_rendiciones_admin(evn, desde=desde_date, hasta=hasta_date)
+    rendiciones = [{**r, 'valo_fmt': _fmt_precio(r['valo'])} for r in rendiciones_raw]
+
+    return render(request, "ventas/adm_principal.html", {
+        "evn":         evn,
+        "evento_desc": svc.get_evento(evn),
+        "img_evento":  svc.get_imagen_evento(evn),
+        "nombre":      request.session.get("adm_nombre", ""),
+        "desde":       desde_date.strftime('%Y-%m-%d'),
+        "hasta":       hasta_date.strftime('%Y-%m-%d'),
+        "rendiciones": rendiciones,
+    })
+
+
+def adm_logout_view(request, evn):
+    for key in ("adm_evn", "adm_usuario", "adm_nombre"):
+        request.session.pop(key, None)
+    return redirect("ventas:adm_login", evn=evn)
+
+
+@csrf_exempt
+def adm_certificar_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("adm_evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "JSON inválido"})
+    usuario_vend = str(body.get("usuario_vend", "")).strip()
+    nro_rend     = str(body.get("nro_rend", "")).strip()
+    ref_banco    = str(body.get("ref_banco", "")).strip()
+    if not usuario_vend or not nro_rend or not ref_banco:
+        return JsonResponse({"ok": False, "error": "Complete los tres campos"})
+    ok, msg = svc.certificar_rendicion(evn, usuario_vend, nro_rend, ref_banco)
+    return JsonResponse({"ok": ok, "error": msg if not ok else ""})
+
+
+# ================================================================ FIN ADMIN
 def rendicion_view(request, evn):
     if request.session.get("evn") != evn:
         return redirect("ventas:login", evn=evn)

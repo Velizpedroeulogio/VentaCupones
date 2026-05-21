@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Administración – {{ evento_desc }}{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <div class="byl-title mt-2 mb-3">Administración – {{ evento_desc }}</div>
+
+    <div class="byl-card">
+        <div class="mb-2">
+            <label class="byl-label">Usuario</label>
+            <input id="f-usuario" type="text" class="byl-input" autocomplete="off" placeholder="Código de usuario">
+        </div>
+        <div class="mb-3">
+            <label class="byl-label">Contraseña</label>
+            <input id="f-pwd" type="password" class="byl-input" placeholder="Contraseña">
+        </div>
+        <div id="msg-error" class="byl-error mb-2" style="display:none;"></div>
+        <button id="btn-ingresar" class="byl-btn" style="width:100%;">Ingresar</button>
+    </div>
+
+</div>
+
+<script>
+const URL_LOGIN    = "{% url 'ventas:adm_login_api' evn %}";
+const URL_PRINCIPAL = "{% url 'ventas:adm_principal' evn %}";
+const CSRF = "{{ csrf_token }}";
+
+async function doLogin() {
+    const usuario = document.getElementById('f-usuario').value.trim();
+    const pwd     = document.getElementById('f-pwd').value.trim();
+    const msg     = document.getElementById('msg-error');
+    msg.style.display = 'none';
+    if (!usuario || !pwd) { msg.textContent = 'Complete usuario y contraseña'; msg.style.display = ''; return; }
+    try {
+        const r = await fetch(URL_LOGIN, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({usuario, pwd})
+        });
+        const d = await r.json();
+        if (d.ok) {
+            window.location.href = URL_PRINCIPAL;
+        } else {
+            msg.textContent = d.error;
+            msg.style.display = '';
+        }
+    } catch(e) {
+        msg.textContent = 'Error de conexión';
+        msg.style.display = '';
+    }
+}
+
+document.getElementById('btn-ingresar').addEventListener('click', doLogin);
+document.getElementById('f-pwd').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+{% endblock %}

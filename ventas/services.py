@@ -439,6 +439,91 @@ def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=
             return True
 
 
+# ------------------------------------------------------------------ ADMIN
+def validate_admin_user(evn, usuario, pwd):
+    row = _fetchone(
+        'SELECT "USR_NOMB","USR_PWDX","USR_ESTD","USR_TUSR"'
+        ' FROM "USR_VTAS"'
+        ' WHERE "USR_EVNX" = %s AND "USR_IDEU" = %s',
+        (evn, str(usuario or '').strip())
+    )
+    if not row:
+        return False, '', 'Usuario no encontrado'
+    nombre, pwd_enc, estd, tusr = row
+    if estd != 'A':
+        return False, '', 'Usuario no habilitado'
+    if str(tusr or '').strip() != 'A':
+        return False, '', 'No es usuario administrativo'
+    if encriptar_pwd(pwd) != str(pwd_enc or ''):
+        return False, '', 'Contraseña incorrecta'
+    return True, str(nombre or ''), ''
+
+
+def get_rendiciones_admin(evn, desde=None, hasta=None):
+    params = [evn, 2]
+    where_extra = ''
+    if desde and hasta:
+        where_extra += ' AND M."MDP_FCHA" BETWEEN %s AND %s'
+        params += [desde, hasta]
+    rows = _fetchall(
+        'SELECT M."MDP_FCHA", M."VEN_COD", M."MDP_CPTE",'
+        '       M."MDP_VALO", M."MDP_ESTD", M."MDP_REFE",'
+        '       COALESCE(U."USR_NOMB", \'\') AS usr_nomb'
+        '  FROM "MDP_MOV" M'
+        '  LEFT JOIN "USR_VTAS" U'
+        '    ON U."USR_EVNX" = M."EVN_NUM" AND U."USR_IDEU" = M."VEN_COD"'
+        ' WHERE M."EVN_NUM" = %s AND M."PRD_ID" = %s'
+        + where_extra +
+        ' ORDER BY M."MDP_FCHA" DESC, M."MDP_HORA" DESC',
+        params
+    )
+    result = []
+    for r in rows:
+        fcha = r[0]
+        result.append({
+            'fecha_fmt': fcha.strftime('%d.%m.%y') if fcha else '',
+            'ven_cod':   str(r[1] or ''),
+            'cpte':      str(r[2] or ''),
+            'valo':      float(r[3]) if r[3] is not None else 0.0,
+            'estd':      str(r[4] or ''),
+            'refe':      str(r[5] or ''),
+            'usr_nomb':  str(r[6] or ''),
+        })
+    return result
+
+
+def certificar_rendicion(evn, usuario_vend, nro_rend, ref_banco):
+    """
+    Certifica una rendición: PRD=1 X→R y PRD=2 X→R con MDP_REFE=ref_banco.
+    Retorna (ok, mensaje).
+    """
+    nro_fmt = str(nro_rend or '').strip().zfill(4)
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            cur.execute(
+                'SELECT id FROM "MDP_MOV"'
+                ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=2'
+                '   AND "MDP_CPTE"=%s AND "MDP_ESTD"=\'X\'',
+                (evn, str(usuario_vend or '').strip(), nro_fmt)
+            )
+            if not cur.fetchone():
+                return False, 'Rendición no encontrada o ya certificada'
+            cur.execute(
+                'UPDATE "MDP_MOV" SET "MDP_ESTD"=\'R\''
+                ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=1'
+                '   AND "MDP_ESTD"=\'X\' AND "MDP_REFE"=%s',
+                (evn, str(usuario_vend or '').strip(), nro_fmt)
+            )
+            cur.execute(
+                'UPDATE "MDP_MOV" SET "MDP_ESTD"=\'R\', "MDP_REFE"=%s'
+                ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "PRD_ID"=2'
+                '   AND "MDP_ESTD"=\'X\' AND "MDP_CPTE"=%s',
+                (str(ref_banco or '').strip(), evn,
+                 str(usuario_vend or '').strip(), nro_fmt)
+            )
+            return True, 'OK'
+
+
 # ------------------------------------------------------------------ RENDICION
 def get_rendicion_data(evn, usuario, desde=None, hasta=None, fpgo=None):
     """Datos de la liquidación previa: ventas I filtradas + totales + comisión."""
