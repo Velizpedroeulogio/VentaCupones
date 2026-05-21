@@ -12,7 +12,12 @@
 
     <!-- PASO 1: Ingreso de DNI -->
     <div id="step-dni">
-        <div class="byl-title mt-2 mb-3">{{ evento_desc }}</div>
+        <div class="byl-title mt-2 mb-2">{{ evento_desc }}</div>
+        {% if msg_qr %}
+        <div class="byl-card mb-3" style="background:#fff8e1;border-left:4px solid #f9a825;font-size:13px;color:#555;padding:10px 14px;">
+            {{ msg_qr }}
+        </div>
+        {% endif %}
         <div class="byl-card">
             <div class="mb-3">
                 <label class="byl-label">Número de Documento</label>
@@ -121,9 +126,17 @@ document.getElementById('btn-buscar').addEventListener('click', async function()
         if (!d.ok) { showMsg('msg-dni', d.error || 'Error'); return; }
         _nid   = nid;
         _found = d.found;
-        document.getElementById('f-nombre').value = d.found ? d.nombre : '';
-        document.getElementById('f-fnac').value   = d.found ? (d.fecha_nac || '') : '';
-        document.getElementById('f-cel').value    = d.found ? (d.celular  || '') : '';
+        const ro = d.found;
+        const bg = ro ? '#f5f5f5' : '';
+        const setField = (id, val) => {
+            const el = document.getElementById(id);
+            el.value    = val || '';
+            el.readOnly = ro;
+            el.style.background = bg;
+        };
+        setField('f-nombre', d.nombre);
+        setField('f-fnac',   d.fecha_nac);
+        setField('f-cel',    d.celular);
         document.getElementById('sec-nuevos').style.display = '';
         showStep('step-persona');
     } catch(e) {

@@ -63,6 +63,11 @@ def get_evento(evn):
 
 
 # ------------------------------------------------------------------ EVENTO DEFAULTS
+def get_evento_msgqr(evn):
+    row = _fetchone('SELECT "EVN_MSGQR" FROM "EVN_DEF" WHERE "EVN_NUM" = %s', (evn,))
+    return str(row[0] or '') if row else ''
+
+
 def get_evento_defaults(evn):
     row = _fetchone(
         'SELECT "EVN_DFTCALL","EVN_DFTBARR","EVN_DFTPROV","EVN_DFTLOCA",'
