@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}{{ evento_desc }}{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <!-- PASO 1: Ingreso de DNI -->
+    <div id="step-dni">
+        <div class="byl-title mt-2 mb-3">{{ evento_desc }}</div>
+        <div class="byl-card">
+            <div class="mb-3">
+                <label class="byl-label">Número de Documento</label>
+                <input id="f-dni" type="number" class="byl-input" inputmode="numeric"
+                       placeholder="Ingrese su DNI" autocomplete="off">
+            </div>
+            <div id="msg-dni" class="byl-error mb-2" style="display:none;"></div>
+            <button id="btn-buscar" class="byl-btn" style="width:100%;">Continuar</button>
+        </div>
+    </div>
+
+    <!-- PASO 2: Datos de la persona -->
+    <div id="step-persona" style="display:none;">
+        <div class="byl-title mt-2 mb-3">Confirmá tus datos</div>
+        <div class="byl-card">
+            <div class="mb-3">
+                <label class="byl-label">Nombre y Apellido</label>
+                <input id="f-nombre" type="text" class="byl-input" placeholder="Nombre y Apellido"
+                       autocomplete="off" maxlength="80">
+            </div>
+            <div id="sec-nuevos" style="display:none;">
+                <div class="mb-3">
+                    <label class="byl-label">Fecha de Nacimiento</label>
+                    <input id="f-fnac" type="date" class="byl-input">
+                </div>
+                <div class="mb-3">
+                    <label class="byl-label">WhatsApp</label>
+                    <input id="f-cel" type="tel" class="byl-input" inputmode="numeric"
+                           placeholder="381xxxxxxx" autocomplete="off">
+                </div>
+            </div>
+            <div id="msg-persona" class="byl-error mb-2" style="display:none;"></div>
+            <div class="d-flex gap-2">
+                <button id="btn-volver" class="byl-btn" style="flex:0 0 auto;">Volver</button>
+                <button id="btn-aceptar" class="byl-btn" style="flex:1;background:var(--byl-accent);color:white;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PASO 3: Cupón asignado -->
+    <div id="step-cupon" style="display:none;">
+        <div style="text-align:center;margin-top:12px;margin-bottom:12px;">
+            <div style="font-size:13px;color:#666;margin-bottom:4px;">Tu Cupón</div>
+            <div style="font-size:48px;font-weight:bold;color:var(--byl-accent);letter-spacing:4px;" id="cupon-num">000000</div>
+            <div style="font-size:12px;color:#888;" id="cupon-cant"></div>
+        </div>
+
+        <!-- Cartones -->
+        <div id="cartones-wrap"></div>
+
+        <!-- Countdown -->
+        <div id="countdown-box" style="text-align:center;margin:16px 0;">
+            <div style="font-size:12px;color:#888;margin-bottom:4px;">Esta pantalla se cerrará en</div>
+            <div style="font-size:36px;font-weight:bold;color:#333;" id="cnt-num">10</div>
+            <div style="font-size:12px;color:#888;">segundos</div>
+        </div>
+
+        <div id="step-gracias" style="display:none;text-align:center;padding:20px 0;">
+            <div style="font-size:22px;font-weight:bold;color:var(--byl-accent);">¡Gracias!</div>
+            <div style="font-size:14px;color:#555;margin-top:6px;">Buena suerte en el sorteo.</div>
+            <button id="btn-nuevo" class="byl-btn mt-3" style="width:100%;">Nueva asignación</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const URL_BUSCAR  = "{% url 'ventas:qr_buscar'  evn %}";
+const URL_ASIGNAR = "{% url 'ventas:qr_asignar' evn %}";
+const CSRF        = "{{ csrf_token }}";
+
+let _nid    = null;
+let _found  = false;
+let _cntInt = null;
+
+function showStep(name) {
+    ['step-dni','step-persona','step-cupon'].forEach(id => {
+        document.getElementById(id).style.display = (id === name) ? '' : 'none';
+    });
+}
+
+function showMsg(id, txt) {
+    const el = document.getElementById(id);
+    el.textContent = txt;
+    el.style.display = txt ? '' : 'none';
+}
+
+// ---- Paso 1: Buscar por DNI ----
+document.getElementById('btn-buscar').addEventListener('click', async function() {
+    const dniVal = document.getElementById('f-dni').value.trim();
+    if (!dniVal) { showMsg('msg-dni', 'Ingrese su número de documento'); return; }
+    const nid = parseInt(dniVal, 10);
+    if (!nid || nid < 1000) { showMsg('msg-dni', 'Documento inválido'); return; }
+
+    this.disabled = true;
+    this.textContent = 'Buscando...';
+    showMsg('msg-dni', '');
+
+    try {
+        const r = await fetch(URL_BUSCAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({nid})
+        });
+        const d = await r.json();
+        if (!d.ok) { showMsg('msg-dni', d.error || 'Error'); return; }
+        _nid   = nid;
+        _found = d.found;
+        document.getElementById('f-nombre').value    = d.found ? d.nombre : '';
+        document.getElementById('f-nombre').readOnly = d.found;
+        document.getElementById('f-nombre').style.background = d.found ? '#f5f5f5' : '';
+        document.getElementById('sec-nuevos').style.display  = d.found ? 'none' : '';
+        showStep('step-persona');
+    } catch(e) {
+        showMsg('msg-dni', 'Error de conexión');
+    } finally {
+        this.disabled    = false;
+        this.textContent = 'Continuar';
+    }
+});
+document.getElementById('f-dni').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-buscar').click();
+});
+
+// ---- Paso 2: Volver ----
+document.getElementById('btn-volver').addEventListener('click', function() {
+    showMsg('msg-persona', '');
+    showStep('step-dni');
+});
+
+// ---- Paso 2: Aceptar ----
+document.getElementById('btn-aceptar').addEventListener('click', async function() {
+    const nombre   = document.getElementById('f-nombre').value.trim();
+    const fecha_nac = _found ? '' : document.getElementById('f-fnac').value.trim();
+    const celular  = _found ? '' : document.getElementById('f-cel').value.trim();
+
+    if (!nombre) { showMsg('msg-persona', 'Ingrese el Nombre y Apellido'); return; }
+    if (!_found && !fecha_nac) { showMsg('msg-persona', 'Ingrese la Fecha de Nacimiento'); return; }
+    if (!_found && !celular)   { showMsg('msg-persona', 'Ingrese el WhatsApp'); return; }
+
+    this.disabled    = true;
+    this.textContent = 'Procesando...';
+    showMsg('msg-persona', '');
+
+    try {
+        const r = await fetch(URL_ASIGNAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({nid: _nid, nombre, fecha_nac, celular})
+        });
+        const d = await r.json();
+        if (!d.ok) { showMsg('msg-persona', d.error || 'Error'); return; }
+        mostrarCupon(d);
+    } catch(e) {
+        showMsg('msg-persona', 'Error de conexión');
+    } finally {
+        this.disabled    = false;
+        this.textContent = 'Aceptar';
+    }
+});
+
+// ---- Paso 3: Mostrar cupón ----
+function mostrarCupon(d) {
+    document.getElementById('cupon-num').textContent = d.sec;
+    document.getElementById('cupon-cant').textContent = d.cantidad + ' cartone' + (d.cantidad === 1 ? '' : 's');
+    renderCartones(d.cartones);
+    document.getElementById('step-gracias').style.display = 'none';
+    document.getElementById('countdown-box').style.display = '';
+    iniciarCountdown();
+    showStep('step-cupon');
+}
+
+function renderCartones(cartones) {
+    const wrap = document.getElementById('cartones-wrap');
+    wrap.innerHTML = '';
+    cartones.forEach((car, idx) => {
+        const nums = car.lis || [];
+        const div = document.createElement('div');
+        div.className = 'byl-card';
+        div.style.cssText = 'padding:8px 10px;margin-bottom:8px;';
+        div.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:6px;">Cartón ${idx+1} — Ser. ${car.ser} N° ${car.num}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">${
+                nums.map(n => `<span style="display:inline-block;min-width:28px;text-align:center;
+                    background:#e8f4fd;border-radius:4px;padding:3px 4px;font-size:13px;font-weight:bold;color:#1565c0;">${n}</span>`
+                ).join('')
+            }</div>`;
+        wrap.appendChild(div);
+    });
+}
+
+function iniciarCountdown() {
+    let seg = 10;
+    document.getElementById('cnt-num').textContent = seg;
+    clearInterval(_cntInt);
+    _cntInt = setInterval(() => {
+        seg--;
+        document.getElementById('cnt-num').textContent = seg;
+        if (seg <= 0) {
+            clearInterval(_cntInt);
+            document.getElementById('countdown-box').style.display = 'none';
+            document.getElementById('step-gracias').style.display = '';
+        }
+    }, 1000);
+}
+
+// ---- Nuevo ----
+document.getElementById('btn-nuevo').addEventListener('click', function() {
+    _nid   = null;
+    _found = false;
+    document.getElementById('f-dni').value    = '';
+    document.getElementById('f-nombre').value = '';
+    document.getElementById('f-fnac').value   = '';
+    document.getElementById('f-cel').value    = '';
+    showMsg('msg-dni', '');
+    showMsg('msg-persona', '');
+    showStep('step-dni');
+});
+</script>
+{% endblock %}

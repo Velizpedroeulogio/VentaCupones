@@ -27,4 +27,7 @@ urlpatterns = [
     path("<int:evn>/adm/certificar/",        views.adm_certificar_api,   name="adm_certificar"),
     path("<int:evn>/rendicion/",             views.rendicion_view,        name="rendicion"),
     path("<int:evn>/rendicion/confirmar/",   views.rendicion_confirmar_api, name="rendicion_confirmar"),
+    path("<int:evn>/qr/",                    views.qr_view,               name="qr"),
+    path("<int:evn>/qr/buscar/",             views.qr_buscar_api,         name="qr_buscar"),
+    path("<int:evn>/qr/asignar/",            views.qr_asignar_api,        name="qr_asignar"),
 ]

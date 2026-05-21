@@ -667,6 +667,118 @@ def confirmar_rendicion(evn, usuario, desde=None, hasta=None, fpgo=None):
             return nro_fmt
 
 
+# ------------------------------------------------------------------ QR AUTO-ASIGNACION
+_QR_TABLA = [
+    #  ini  fin   [dig 0-2, dig 3-4, dig 5-7, dig 8-9]
+    (0,  14, [2, 3, 6, 9]),
+    (15, 29, [9, 6, 3, 2]),
+    (30, 44, [6, 9, 2, 3]),
+    (45, 59, [3, 2, 9, 6]),
+]
+
+
+def get_cantidad_qr(minuto, ultimo_digito):
+    d = int(ultimo_digito)
+    for ini, fin, cant in _QR_TABLA:
+        if ini <= minuto <= fin:
+            if d in (0, 1, 2): return cant[0]
+            if d in (3, 4):    return cant[1]
+            if d in (5, 6, 7): return cant[2]
+            return cant[3]
+    return 2
+
+
+def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'):
+    """
+    Determina cantidad por tabla minuto/dígito, busca cupón, lo vende a qr_usuario.
+    Retorna (sec, cartones, cantidad, error_msg).
+    """
+    from datetime import date, datetime
+    hoy   = date.today()
+    ahora = datetime.now().time()
+    minuto     = datetime.now().minute
+    ultimo_dig = int(str(abs(int(nid)))[-1])
+    cantidad   = get_cantidad_qr(minuto, ultimo_dig)
+
+    pvt = get_pvt_sort(evn)
+    if not pvt:
+        return None, None, cantidad, "Sin configuración de venta vigente"
+    if cantidad not in pvt.get('rangos', {}):
+        return None, None, cantidad, f"Sin rango configurado para {cantidad} cartones"
+
+    rango     = pvt['rangos'][cantidad]
+    secuencias = get_secuencias_disponibles(evn, rango['scd'], rango['sch'])
+    if not secuencias:
+        return None, None, cantidad, "Sin cupones disponibles"
+
+    sec    = secuencias[0]
+    precio = pvt['precios'].get(cantidad, 0)
+
+    # Persona: usar existente o guardar nueva con defaults del evento
+    persona = get_persona(nid)
+    if persona:
+        nom     = persona.get('per_nombre') or nombre
+        loc_txt = get_nombre_by_id('app_core_localidad', 'loc_nombre', persona.get('per_localidad_id'))
+        prv_txt = get_nombre_by_id('app_core_provincia', 'pro_provincia', persona.get('per_provincia_id'))
+        def v(k): return persona.get(k) or ''
+        dom = f"{v('per_barrio')}|{v('per_calle')}|{v('per_puerta')}|{v('per_piso')}|{v('per_depto')}|"
+        loc = f"{prv_txt}|{loc_txt}|{v('per_codigo_postal')}|"
+        ref = f"{v('per_celular')}|{v('per_email')}|{v('per_telefono')}|||"
+    else:
+        nom     = nombre
+        defs    = get_evento_defaults(evn)
+        prv_id  = get_or_create_provincia(defs.get('_prv_desc', ''))
+        loc_id  = get_or_create_localidad(defs.get('_loc_desc', ''), prv_id)
+        tid     = int(defs.get('per_tipo_identidad_id') or 1)
+        tpe     = int(defs.get('per_tipo_persona_id') or 1)
+        calle   = defs.get('per_calle', '')
+        barrio  = defs.get('per_barrio', '')
+        cpos    = defs.get('per_codigo_postal', '')
+        prv_txt = defs.get('_prv_desc', '')
+        loc_txt = defs.get('_loc_desc', '')
+        with connection.cursor() as cur:
+            cur.execute(
+                'INSERT INTO "app_gbl_persona"'
+                ' ("per_numero_identidad","per_fecha_nac","per_nombre",'
+                '  "per_calle","per_barrio","per_codigo_postal","per_celular",'
+                '  "per_localidad_id","per_provincia_id",'
+                '  "per_tipo_identidad_id","per_tipo_persona_id")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                ' ON CONFLICT ("per_numero_identidad") DO NOTHING',
+                (int(nid), fecha_nac or None, nombre,
+                 calle, barrio, cpos, celular,
+                 loc_id, prv_id, tid, tpe)
+            )
+        dom = f"{barrio}|{calle}|||"
+        loc = f"{prv_txt}|{loc_txt}|{cpos}|"
+        ref = f"{celular}||||"
+
+    # Vender atómicamente (verifica disponibilidad en el UPDATE)
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            cur.execute(
+                'UPDATE "EVNC_CAR"'
+                ' SET "EVNC_EST"=%s,"EVNC_VEN"=%s,"EVNC_TIME"=NOW(),'
+                '     "EVNC_NID"=%s,"EVNC_NOM"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s,'
+                '     "EVNC_FPGO"=%s'
+                ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s AND ' + _EST_DISPONIBLE,
+                ('V', str(qr_usuario), int(nid), nom, dom, loc, ref, 'Q', evn, int(sec))
+            )
+            if cur.rowcount == 0:
+                return None, None, cantidad, "El cupón ya no está disponible, intente nuevamente"
+            cur.execute(
+                'INSERT INTO "MDP_MOV"'
+                ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
+                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE","MDP_FPGO","MDP_NID")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (hoy, ahora, 1, evn, str(qr_usuario), 1,
+                 precio, 'C', 'I', str(sec).zfill(6), 'Q', int(nid))
+            )
+
+    cartones = get_cartones_cupon(evn, sec)
+    return sec, cartones, cantidad, None
+
+
 # ------------------------------------------------------------------ MOVIMIENTOS
 def get_prd_desc(prd):
     row = _fetchone('SELECT "PRD_DSCR" FROM "PRD_MOV" WHERE "ID" = %s', (int(prd),))

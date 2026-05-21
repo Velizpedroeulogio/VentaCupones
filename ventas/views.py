@@ -431,6 +431,63 @@ def rendicion_confirmar_api(request, evn):
     return JsonResponse({"ok": True, "nro_rend": nro})
 
 
+# ================================================================ QR AUTO-ASIGNACION
+def qr_view(request, evn):
+    return render(request, 'ventas/qr.html', {
+        'evn':         evn,
+        'evento_desc': svc.get_evento(evn),
+        'img_evento':  svc.get_imagen_evento(evn),
+    })
+
+
+@csrf_exempt
+def qr_buscar_api(request, evn):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+    try:
+        body = json.loads(request.body)
+        nid  = int(body.get('nid', 0))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'DNI inválido'})
+    if not nid:
+        return JsonResponse({'ok': False, 'error': 'Ingrese el DNI'})
+    persona = svc.get_persona(nid)
+    if persona:
+        return JsonResponse({'ok': True, 'found': True, 'nombre': persona.get('per_nombre', '')})
+    return JsonResponse({'ok': True, 'found': False})
+
+
+@csrf_exempt
+def qr_asignar_api(request, evn):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+    try:
+        body = json.loads(request.body)
+        nid  = int(body.get('nid', 0))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'DNI inválido'})
+    if not nid:
+        return JsonResponse({'ok': False, 'error': 'DNI requerido'})
+
+    nombre    = str(body.get('nombre', '')).strip()
+    fecha_nac = str(body.get('fecha_nac', '')).strip() or None
+    celular   = str(body.get('celular', '')).strip()
+
+    if not nombre:
+        return JsonResponse({'ok': False, 'error': 'El nombre es requerido'})
+
+    sec, cartones, cantidad, error = svc.asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular)
+    if error:
+        return JsonResponse({'ok': False, 'error': error})
+    return JsonResponse({
+        'ok':       True,
+        'sec':      str(sec).zfill(6),
+        'cantidad': cantidad,
+        'cartones': cartones,
+    })
+
+
+# ================================================================ FIN QR
 def datos_view(request, evn):
     if request.session.get("evn") != evn:
         return redirect("ventas:login", evn=evn)
