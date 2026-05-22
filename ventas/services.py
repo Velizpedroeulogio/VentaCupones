@@ -702,6 +702,22 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
     from datetime import date, datetime
     hoy   = date.today()
     ahora = datetime.now().time()
+
+    # Validar estado y fechas habilitadas del evento
+    evn_ctrl = _fetchone(
+        'SELECT "EVN_ESTADO","EVN_FCHDES","EVN_FCHHAS" FROM "EVN_DEF" WHERE "EVN_NUM"=%s',
+        (evn,)
+    )
+    if evn_ctrl:
+        estado, fch_des, fch_has = evn_ctrl
+        estado = str(estado or 'H').strip()
+        if estado == 'B':
+            return None, None, None, "Servicio bloqueado"
+        if fch_des and hoy < fch_des:
+            return None, None, None, f"Servicio no disponible hasta el {fch_des.strftime('%d/%m/%Y')}"
+        if fch_has and hoy > fch_has:
+            return None, None, None, f"Servicio vencido el {fch_has.strftime('%d/%m/%Y')}"
+
     minuto     = datetime.now().minute
     ultimo_dig = int(str(abs(int(nid)))[-1])
     cantidad   = get_cantidad_qr(minuto, ultimo_dig)
