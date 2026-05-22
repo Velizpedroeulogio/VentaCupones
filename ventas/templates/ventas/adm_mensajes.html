@@ -44,31 +44,36 @@
     <div class="byl-card" style="padding:0;overflow:hidden;">
         <!-- Encabezado tabla -->
         <div style="background:#f0f0f0;padding:6px 10px;display:grid;
-                    grid-template-columns:55px 40px 70px 130px 60px 1fr 90px;
+                    grid-template-columns:55px 40px 70px 1fr 170px 90px;
                     column-gap:6px;font-size:11px;font-weight:bold;color:#444;">
             <span>Fecha</span>
             <span>Hora</span>
             <span>Cupón</span>
-            <span>Email</span>
-            <span>WhatsApp</span>
             <span>Error</span>
+            <span>Destino</span>
             <span style="text-align:center;">Acción</span>
         </div>
 
         {% for m in mensajes %}
         <div id="row-{{ m.id }}"
              style="border-top:1px solid #eee;padding:5px 10px;display:grid;
-                    grid-template-columns:55px 40px 70px 130px 60px 1fr 90px;
+                    grid-template-columns:55px 40px 70px 1fr 170px 90px;
                     column-gap:6px;font-size:12px;align-items:start;
                     {% if m.mrka == 'E' %}background:#f1f8f1;{% elif m.mrka == 'X' %}background:#fff8f8;{% endif %}">
             <span>{{ m.fecha }}</span>
             <span style="color:#888;">{{ m.hora }}</span>
             <span>{{ m.sec }}</span>
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#555;"
-                  title="{{ m.mail }}">{{ m.mail|default:"-" }}</span>
-            <span style="font-size:11px;color:#555;">{{ m.cel|default:"-" }}</span>
             <span style="font-size:11px;color:#c62828;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
-                  title="{{ m.erro }}">{{ m.erro|truncatechars:50 }}</span>
+                  title="{{ m.erro }}">{{ m.erro|truncatechars:60 }}</span>
+            <!-- Destino: email línea 1 / WhatsApp línea 2 -->
+            <span style="font-size:11px;color:#555;line-height:1.6;">
+                <span style="display:block;">
+                    <span style="color:#888;">@</span> {{ m.mail|default:"—" }}
+                </span>
+                <span style="display:block;">
+                    <span style="color:#888;">W</span> {{ m.cel|default:"—" }}
+                </span>
+            </span>
             <span id="acc-{{ m.id }}" style="text-align:center;">
                 {% if m.mrka == 'E' %}
                 <span style="font-size:11px;color:#2e7d32;font-weight:bold;">✓ Enviado</span>
