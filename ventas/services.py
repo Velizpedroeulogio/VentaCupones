@@ -68,6 +68,27 @@ def get_evento_msgqr(evn):
     return str(row[0] or '') if row else ''
 
 
+def check_qr_habilitado(evn):
+    """Retorna None si OK, o string de error si el servicio no está disponible."""
+    from datetime import date
+    hoy = date.today()
+    row = _fetchone(
+        'SELECT "EVN_ESTADO","EVN_FCHDES","EVN_FCHHAS" FROM "EVN_DEF" WHERE "EVN_NUM"=%s',
+        (evn,)
+    )
+    if not row:
+        return None
+    estado, fch_des, fch_has = row
+    estado = str(estado or 'H').strip()
+    if estado == 'B':
+        return "Servicio bloqueado"
+    if fch_des and hoy < fch_des:
+        return f"Servicio no disponible hasta el {fch_des.strftime('%d/%m/%Y')}"
+    if fch_has and hoy > fch_has:
+        return f"Servicio vencido el {fch_has.strftime('%d/%m/%Y')}"
+    return None
+
+
 def get_evento_defaults(evn):
     row = _fetchone(
         'SELECT "EVN_DFTCALL","EVN_DFTBARR","EVN_DFTPROV","EVN_DFTLOCA",'

@@ -480,6 +480,7 @@ def qr_view(request, evn):
         'evento_desc': svc.get_evento(evn),
         'img_evento':  svc.get_imagen_evento(evn),
         'msg_qr':      svc.get_evento_msgqr(evn).replace('\\n', '\n'),
+        'bloqueo_msg': svc.check_qr_habilitado(evn),
     })
 
 

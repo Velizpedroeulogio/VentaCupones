@@ -10,6 +10,19 @@
     </div>
     {% endif %}
 
+    {% if bloqueo_msg %}
+    <!-- Servicio no disponible -->
+    <div style="text-align:center;padding:30px 0;">
+        <div style="font-size:18px;font-weight:bold;color:#c62828;margin-bottom:12px;">
+            {{ bloqueo_msg }}
+        </div>
+        <button class="byl-btn" onclick="window.location.reload()"
+                style="font-size:13px;padding:8px 28px;margin-top:8px;">
+            Finalizar
+        </button>
+    </div>
+    {% else %}
+
     <!-- PASO 1: Ingreso de DNI -->
     <div id="step-dni">
         <div class="byl-title mt-2 mb-3">{{ evento_desc }}</div>
@@ -53,7 +66,7 @@
     </div>
 
     <!-- PASO 3: Cupón asignado -->
-    <div id="step-cupon" style="display:none;">
+    <div id="step-cupon" style="display:none;" >
         <div style="text-align:center;margin-top:12px;margin-bottom:12px;">
             <div style="font-size:13px;color:#666;margin-bottom:4px;">Tu Cupón</div>
             <div style="font-size:48px;font-weight:bold;color:var(--byl-accent);letter-spacing:4px;" id="cupon-num">000000</div>
@@ -79,6 +92,8 @@
             <button id="btn-nuevo" class="byl-btn mt-3" style="width:100%;">Nueva asignación</button>
         </div>
     </div>
+
+    {% endif %}
 
 </div>
 
