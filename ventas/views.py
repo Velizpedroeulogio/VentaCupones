@@ -318,6 +318,39 @@ def adm_principal_view(request, evn):
     })
 
 
+def adm_mensajes_view(request, evn):
+    if request.session.get("adm_evn") != evn:
+        return redirect("ventas:adm_login", evn=evn)
+    solo_pend = request.GET.get('todos', '') != '1'
+    mensajes  = svc.get_msg_proc(evn, solo_pendientes=solo_pend)
+    return render(request, 'ventas/adm_mensajes.html', {
+        'evn':         evn,
+        'evento_desc': svc.get_evento(evn),
+        'img_evento':  svc.get_imagen_evento(evn),
+        'nombre':      request.session.get('adm_nombre', ''),
+        'mensajes':    mensajes,
+        'solo_pend':   solo_pend,
+    })
+
+
+@csrf_exempt
+def adm_reenviar_api(request, evn):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+    if request.session.get('adm_evn') != evn:
+        return JsonResponse({'ok': False, 'error': 'Sesión inválida'})
+    try:
+        body   = json.loads(request.body)
+        msg_id = int(body.get('msg_id', 0))
+        via    = str(body.get('via', 'M')).strip()
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Datos inválidos'})
+    if not msg_id or via not in ('M', 'W'):
+        return JsonResponse({'ok': False, 'error': 'Parámetros inválidos'})
+    ok, msg = svc.reenviar_msg_proc(evn, msg_id, via)
+    return JsonResponse({'ok': ok, 'msg': msg})
+
+
 def adm_logout_view(request, evn):
     for key in ("adm_evn", "adm_usuario", "adm_nombre"):
         request.session.pop(key, None)

@@ -1096,6 +1096,82 @@ def _enviar_email(to_addr, subject, body):
     log.info("SMTP OK enviado a %s", to_addr)
 
 
+def get_msg_proc(evn, solo_pendientes=True):
+    filtro = "AND \"MSG_MRKA\" IN ('P','X')" if solo_pendientes else ''
+    rows = _fetchall(
+        'SELECT "ID","MSG_FCHA","MSG_HORA","MSG_IDPR","MSG_SEC",'
+        '       "MSG_REFE","MSG_TXTO","MSG_ERRO","MSG_MRKA"'
+        ' FROM "MSG_PROC"'
+        ' WHERE "MSG_EVN" = %s ' + filtro +
+        ' ORDER BY "MSG_FCHA" DESC, "MSG_HORA" DESC'
+        ' LIMIT 200',
+        (evn,)
+    )
+    result = []
+    for r in rows:
+        refe   = str(r[5] or '')
+        partes = refe.split('|')
+        cel    = partes[0].strip() if len(partes) > 0 else ''
+        mail   = partes[1].strip() if len(partes) > 1 else ''
+        fcha   = r[1]
+        result.append({
+            'id':    r[0],
+            'fecha': fcha.strftime('%d.%m.%y') if fcha else '',
+            'hora':  str(r[2])[:5] if r[2] else '',
+            'idpr':  str(r[3] or ''),
+            'sec':   str(r[4] or ''),
+            'cel':   cel,
+            'mail':  mail,
+            'txto':  str(r[6] or ''),
+            'erro':  str(r[7] or ''),
+            'mrka':  str(r[8] or ''),
+        })
+    return result
+
+
+def reenviar_msg_proc(evn, msg_id, via):
+    """Reenvía un MSG_PROC. via='M' email, via='W' whatsapp. Actualiza MSG_MRKA."""
+    row = _fetchone(
+        'SELECT "MSG_REFE","MSG_TXTO","MSG_SEC" FROM "MSG_PROC"'
+        ' WHERE "ID"=%s AND "MSG_EVN"=%s',
+        (msg_id, evn)
+    )
+    if not row:
+        return False, 'Registro no encontrado'
+
+    refe   = str(row[0] or '')
+    txto   = str(row[1] or '')
+    sec    = str(row[2] or '').zfill(6)
+    partes = refe.split('|')
+    cel    = partes[0].strip() if len(partes) > 0 else ''
+    mail   = partes[1].strip() if len(partes) > 1 else ''
+
+    try:
+        if via == 'M':
+            if not mail:
+                return False, 'Sin dirección de email'
+            _enviar_email(mail, f'Cupón N° {sec}', txto)
+        else:
+            if not cel:
+                return False, 'Sin número de WhatsApp'
+            pvt  = get_pvt_sort(evn)
+            wpro = str(pvt.get('wpro') or 'C') if pvt else 'C'
+            _enviar_whatsapp(cel, txto, wpro)
+        with connection.cursor() as cur:
+            cur.execute(
+                'UPDATE "MSG_PROC" SET "MSG_MRKA"=%s WHERE "ID"=%s',
+                ('E', msg_id)
+            )
+        return True, 'Enviado correctamente'
+    except Exception as e:
+        with connection.cursor() as cur:
+            cur.execute(
+                'UPDATE "MSG_PROC" SET "MSG_MRKA"=%s, "MSG_ERRO"=%s WHERE "ID"=%s',
+                ('X', str(e)[:500], msg_id)
+            )
+        return False, str(e)
+
+
 def registrar_msg_proc(idpr, refe, txto, evn=None, sec=None, erro=None):
     from datetime import date, datetime
     try:

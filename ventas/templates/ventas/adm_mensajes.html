@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Mensajes – {{ evento_desc }}{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <!-- Encabezado -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;" class="mt-2 mb-2">
+        <div class="byl-title">Mensajes – {{ evento_desc }}</div>
+        <div style="font-size:12px;color:#666;">
+            {{ nombre }} &nbsp;|&nbsp;
+            <a href="{% url 'ventas:adm_principal' evn %}" style="color:var(--byl-accent);">Rendiciones</a>
+            &nbsp;|&nbsp;
+            <a href="{% url 'ventas:adm_logout' evn %}" style="color:var(--byl-accent);">Salir</a>
+        </div>
+    </div>
+
+    <!-- Filtro -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px;">
+        <span style="color:#555;">Mostrar:</span>
+        <a class="byl-btn" href="?{% if not solo_pend %}todos=1{% endif %}"
+           style="font-size:11px;padding:3px 9px;{% if solo_pend %}background:var(--byl-accent);color:white;{% endif %}">
+            Pendientes / Error
+        </a>
+        <a class="byl-btn" href="?todos=1"
+           style="font-size:11px;padding:3px 9px;{% if not solo_pend %}background:var(--byl-accent);color:white;{% endif %}">
+            Todos
+        </a>
+    </div>
+
+    {% if mensajes %}
+    <div id="msg-global" style="display:none;font-size:12px;margin-bottom:8px;padding:6px 10px;border-radius:4px;"></div>
+
+    <div class="byl-card" style="padding:0;overflow:hidden;">
+        <!-- Encabezado tabla -->
+        <div style="background:#f0f0f0;padding:6px 10px;display:grid;
+                    grid-template-columns:55px 40px 70px 130px 60px 1fr 90px;
+                    column-gap:6px;font-size:11px;font-weight:bold;color:#444;">
+            <span>Fecha</span>
+            <span>Hora</span>
+            <span>Cupón</span>
+            <span>Email</span>
+            <span>WhatsApp</span>
+            <span>Error</span>
+            <span style="text-align:center;">Acción</span>
+        </div>
+
+        {% for m in mensajes %}
+        <div id="row-{{ m.id }}"
+             style="border-top:1px solid #eee;padding:5px 10px;display:grid;
+                    grid-template-columns:55px 40px 70px 130px 60px 1fr 90px;
+                    column-gap:6px;font-size:12px;align-items:start;
+                    {% if m.mrka == 'E' %}background:#f1f8f1;{% elif m.mrka == 'X' %}background:#fff8f8;{% endif %}">
+            <span>{{ m.fecha }}</span>
+            <span style="color:#888;">{{ m.hora }}</span>
+            <span>{{ m.sec }}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#555;"
+                  title="{{ m.mail }}">{{ m.mail|default:"-" }}</span>
+            <span style="font-size:11px;color:#555;">{{ m.cel|default:"-" }}</span>
+            <span style="font-size:11px;color:#c62828;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                  title="{{ m.erro }}">{{ m.erro|truncatechars:50 }}</span>
+            <span id="acc-{{ m.id }}" style="text-align:center;">
+                {% if m.mrka == 'E' %}
+                <span style="font-size:11px;color:#2e7d32;font-weight:bold;">✓ Enviado</span>
+                {% else %}
+                <div style="display:flex;flex-direction:column;gap:3px;">
+                    {% if m.mail %}
+                    <button class="byl-btn" onclick="reenviar({{ m.id }},'M')"
+                            style="font-size:10px;padding:2px 6px;">Email</button>
+                    {% endif %}
+                    {% if m.cel %}
+                    <button class="byl-btn" onclick="reenviar({{ m.id }},'W')"
+                            style="font-size:10px;padding:2px 6px;">WhatsApp</button>
+                    {% endif %}
+                    {% if not m.mail and not m.cel %}
+                    <span style="font-size:10px;color:#999;">Sin destino</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-2" style="font-size:11px;color:#999;">{{ mensajes|length }} registro{% if mensajes|length != 1 %}s{% endif %}</div>
+
+    {% else %}
+    <div class="byl-card" style="font-size:13px;color:#999;">
+        {% if solo_pend %}Sin mensajes pendientes de reenvío.{% else %}Sin registros.{% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+const URL_REENVIAR = "{% url 'ventas:adm_reenviar' evn %}";
+const CSRF = "{{ csrf_token }}";
+
+async function reenviar(msgId, via) {
+    const accEl = document.getElementById('acc-' + msgId);
+    const prev  = accEl.innerHTML;
+    accEl.innerHTML = '<span style="font-size:10px;color:#888;">Enviando...</span>';
+
+    try {
+        const r = await fetch(URL_REENVIAR, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({msg_id: msgId, via})
+        });
+        const d = await r.json();
+        const global = document.getElementById('msg-global');
+        global.style.display = '';
+        if (d.ok) {
+            accEl.innerHTML = '<span style="font-size:11px;color:#2e7d32;font-weight:bold;">✓ Enviado</span>';
+            document.getElementById('row-' + msgId).style.background = '#f1f8f1';
+            global.style.background = '#e8f5e9';
+            global.style.color      = '#2e7d32';
+            global.textContent      = 'Mensaje reenviado correctamente.';
+        } else {
+            accEl.innerHTML = prev;
+            document.getElementById('row-' + msgId).style.background = '#fff8f8';
+            global.style.background = '#ffebee';
+            global.style.color      = '#c62828';
+            global.textContent      = 'Error: ' + (d.msg || d.error || 'Error desconocido');
+        }
+    } catch(e) {
+        accEl.innerHTML = prev;
+        const global = document.getElementById('msg-global');
+        global.style.display    = '';
+        global.style.background = '#ffebee';
+        global.style.color      = '#c62828';
+        global.textContent      = 'Error de conexión';
+    }
+}
+</script>
+{% endblock %}
