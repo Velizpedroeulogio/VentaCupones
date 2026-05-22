@@ -21,6 +21,10 @@
         </div>
     </div>
 
+    {% if error_db %}
+    <div class="byl-error mb-2" style="font-size:12px;">Error al consultar: {{ error_db }}</div>
+    {% endif %}
+
     <!-- Filtro -->
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px;">
         <span style="color:#555;">Mostrar:</span>

@@ -321,8 +321,16 @@ def adm_principal_view(request, evn):
 def adm_mensajes_view(request, evn):
     if request.session.get("adm_evn") != evn:
         return redirect("ventas:adm_login", evn=evn)
+    import logging
+    log = logging.getLogger(__name__)
     solo_pend = request.GET.get('todos', '') != '1'
-    mensajes  = svc.get_msg_proc(evn, solo_pendientes=solo_pend)
+    error_db  = ''
+    try:
+        mensajes = svc.get_msg_proc(evn, solo_pendientes=solo_pend)
+    except Exception as e:
+        log.error("adm_mensajes error: %s", e, exc_info=True)
+        mensajes = []
+        error_db = str(e)
     return render(request, 'ventas/adm_mensajes.html', {
         'evn':         evn,
         'evento_desc': svc.get_evento(evn),
@@ -330,6 +338,7 @@ def adm_mensajes_view(request, evn):
         'nombre':      request.session.get('adm_nombre', ''),
         'mensajes':    mensajes,
         'solo_pend':   solo_pend,
+        'error_db':    error_db,
     })
 
 
