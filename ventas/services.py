@@ -1099,7 +1099,7 @@ def _enviar_email(to_addr, subject, body):
 def get_msg_proc(evn, solo_pendientes=True):
     filtro = "AND \"MSG_MRKA\" IN ('P','X')" if solo_pendientes else ''
     rows = _fetchall(
-        'SELECT "ID","MSG_FCHA","MSG_HORA","MSG_IDPR","MSG_SEC",'
+        'SELECT id,"MSG_FCHA","MSG_HORA","MSG_IDPR","MSG_SEC",'
         '       "MSG_REFE","MSG_TXTO","MSG_ERRO","MSG_MRKA"'
         ' FROM "MSG_PROC"'
         ' WHERE "MSG_EVN" = %s ' + filtro +
@@ -1133,7 +1133,7 @@ def reenviar_msg_proc(evn, msg_id, via):
     """Reenvía un MSG_PROC. via='M' email, via='W' whatsapp. Actualiza MSG_MRKA."""
     row = _fetchone(
         'SELECT "MSG_REFE","MSG_TXTO","MSG_SEC" FROM "MSG_PROC"'
-        ' WHERE "ID"=%s AND "MSG_EVN"=%s',
+        ' WHERE id=%s AND "MSG_EVN"=%s',
         (msg_id, evn)
     )
     if not row:
@@ -1159,14 +1159,14 @@ def reenviar_msg_proc(evn, msg_id, via):
             _enviar_whatsapp(cel, txto, wpro)
         with connection.cursor() as cur:
             cur.execute(
-                'UPDATE "MSG_PROC" SET "MSG_MRKA"=%s WHERE "ID"=%s',
+                'UPDATE "MSG_PROC" SET "MSG_MRKA"=%s WHERE id=%s',
                 ('E', msg_id)
             )
         return True, 'Enviado correctamente'
     except Exception as e:
         with connection.cursor() as cur:
             cur.execute(
-                'UPDATE "MSG_PROC" SET "MSG_MRKA"=%s, "MSG_ERRO"=%s WHERE "ID"=%s',
+                'UPDATE "MSG_PROC" SET "MSG_MRKA"=%s, "MSG_ERRO"=%s WHERE id=%s',
                 ('X', str(e)[:500], msg_id)
             )
         return False, str(e)
