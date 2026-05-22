@@ -12,6 +12,18 @@
     <div class="mt-3 mb-2 byl-title">{{ evento_desc }}</div>
     {% endif %}
 
+    {% if bloqueo_msg %}
+    <div style="text-align:center;padding:30px 0;">
+        <div style="font-size:18px;font-weight:bold;color:#c62828;margin-bottom:12px;">
+            {{ bloqueo_msg }}
+        </div>
+        <button class="byl-btn" onclick="window.location.reload()"
+                style="font-size:13px;padding:8px 28px;margin-top:8px;">
+            Finalizar
+        </button>
+    </div>
+    {% else %}
+
     <div id="div-error" class="byl-error" style="display:none"></div>
 
     <!-- Vista: sesión guardada -->
@@ -61,6 +73,8 @@
             <button class="byl-btn" onclick="volverAIngreso()">Cancelar</button>
         </div>
     </div>
+
+    {% endif %}
 
 </div>
 

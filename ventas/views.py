@@ -16,6 +16,7 @@ def login_view(request, evn):
         "evn":         evn,
         "evento_desc": svc.get_evento(evn),
         "img_evento":  svc.get_imagen_evento(evn),
+        "bloqueo_msg": svc.check_qr_habilitado(evn),
     })
 
 
