@@ -779,19 +779,21 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
         cpos    = defs.get('per_codigo_postal', '')
         prv_txt = defs.get('_prv_desc', '')
         loc_txt = defs.get('_loc_desc', '')
-        with connection.cursor() as cur:
-            cur.execute(
-                'INSERT INTO "app_gbl_persona"'
-                ' ("per_numero_identidad","per_fecha_nac","per_nombre",'
-                '  "per_calle","per_barrio","per_codigo_postal","per_celular",'
-                '  "per_localidad_id","per_provincia_id",'
-                '  "per_tipo_identidad_id","per_tipo_persona_id")'
-                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
-                ' ON CONFLICT ("per_numero_identidad") DO NOTHING',
-                (int(nid), fecha_nac or None, nombre,
-                 calle, barrio, cpos, celular,
-                 loc_id, prv_id, tid, tpe)
-            )
+        try:
+            with connection.cursor() as cur:
+                cur.execute(
+                    'INSERT INTO "app_gbl_persona"'
+                    ' ("per_numero_identidad","per_fecha_nac","per_nombre",'
+                    '  "per_calle","per_barrio","per_codigo_postal","per_celular",'
+                    '  "per_localidad_id","per_provincia_id",'
+                    '  "per_tipo_identidad_id","per_tipo_persona_id")'
+                    ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                    (int(nid), fecha_nac or None, nombre,
+                     calle, barrio, cpos, celular,
+                     loc_id, prv_id, tid, tpe)
+                )
+        except Exception:
+            pass
         dom = f"{barrio}|{calle}|||"
         loc = f"{prv_txt}|{loc_txt}|{cpos}|"
         ref = f"{celular}||||"
