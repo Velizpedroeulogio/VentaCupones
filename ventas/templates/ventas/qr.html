@@ -68,6 +68,7 @@
     <!-- PASO 3: Cupón asignado -->
     <div id="step-cupon" style="display:none;" >
         <div style="text-align:center;margin-top:12px;margin-bottom:12px;">
+            <div id="cupon-info" style="font-size:12px;color:#777;margin-bottom:6px;line-height:1.5;"></div>
             <div style="font-size:13px;color:#666;margin-bottom:4px;">Tu Cupón</div>
             <div style="font-size:48px;font-weight:bold;color:var(--byl-accent);letter-spacing:4px;" id="cupon-num">000000</div>
             {% if msg_qr %}
@@ -194,7 +195,7 @@ document.getElementById('btn-aceptar').addEventListener('click', async function(
         if (!d.ok) { showMsg('msg-persona', d.error || 'Error'); return; }
         mostrarCupon(d);
     } catch(e) {
-        showMsg('msg-persona', 'Error de conexión');
+        showMsg('msg-persona', 'Error de conexión: ' + e.message);
     } finally {
         this.disabled    = false;
         this.textContent = 'Aceptar';
@@ -205,6 +206,15 @@ document.getElementById('btn-aceptar').addEventListener('click', async function(
 function mostrarCupon(d) {
     document.getElementById('cupon-num').textContent = d.sec;
     document.getElementById('cupon-cant').textContent = d.cantidad + ' cartone' + (d.cantidad === 1 ? '' : 's');
+    const ahora = new Date();
+    const dd  = String(ahora.getDate()).padStart(2,'0');
+    const mm  = String(ahora.getMonth()+1).padStart(2,'0');
+    const yy  = ahora.getFullYear();
+    const hh  = String(ahora.getHours()).padStart(2,'0');
+    const min = String(ahora.getMinutes()).padStart(2,'0');
+    const ss  = String(ahora.getSeconds()).padStart(2,'0');
+    const infoEl = document.getElementById('cupon-info');
+    if (infoEl) infoEl.textContent = dd+'/'+mm+'/'+yy+'  '+hh+':'+min+':'+ss+'  DNI: '+_nid;
     renderCartones(d.cartones);
     document.getElementById('step-gracias').style.display = 'none';
     document.getElementById('countdown-box').style.display = '';
@@ -226,7 +236,7 @@ function renderCartones(cartones) {
         div.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:6px;">Cartón ${idx+1} — ${mtzStr}-${serStr}-${numStr}</div>
             <div style="display:flex;flex-wrap:wrap;gap:4px;">${
                 nums.map(n => `<span style="display:inline-block;min-width:28px;text-align:center;
-                    background:#e8f4fd;border-radius:4px;padding:3px 4px;font-size:13px;font-weight:bold;color:#1565c0;">${n}</span>`
+                    background:#e8f4fd;border:1px solid #1565c0;border-radius:4px;padding:3px 4px;font-size:13px;font-weight:bold;color:#1565c0;">${n}</span>`
                 ).join('')
             }</div>`;
         wrap.appendChild(div);

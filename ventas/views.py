@@ -527,7 +527,13 @@ def qr_asignar_api(request, evn):
     if not nombre:
         return JsonResponse({'ok': False, 'error': 'El nombre es requerido'})
 
-    sec, cartones, cantidad, error = svc.asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular)
+    import logging, traceback
+    log = logging.getLogger(__name__)
+    try:
+        sec, cartones, cantidad, error = svc.asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular)
+    except Exception as exc:
+        log.error("qr_asignar_api excepcion: %s\n%s", exc, traceback.format_exc())
+        return JsonResponse({'ok': False, 'error': f'Error interno: {exc}'})
     if error:
         return JsonResponse({'ok': False, 'error': error})
     return JsonResponse({

@@ -704,10 +704,10 @@ _QR_TABLA = [
 ]
 
 
-def get_cantidad_qr(minuto, ultimo_digito):
+def get_cantidad_qr(segundo, ultimo_digito):
     d = int(ultimo_digito)
     for ini, fin, cant in _QR_TABLA:
-        if ini <= minuto <= fin:
+        if ini <= segundo <= fin:
             if d in (0, 1, 2): return cant[0]
             if d in (3, 4):    return cant[1]
             if d in (5, 6, 7): return cant[2]
@@ -739,9 +739,9 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
         if fch_has and hoy > fch_has:
             return None, None, None, f"Servicio vencido el {fch_has.strftime('%d/%m/%Y')}"
 
-    minuto     = datetime.now().minute
+    segundo    = datetime.now().second
     ultimo_dig = int(str(abs(int(nid)))[-1])
-    cantidad   = get_cantidad_qr(minuto, ultimo_dig)
+    cantidad   = get_cantidad_qr(segundo, ultimo_dig)
 
     pvt = get_pvt_sort(evn)
     if not pvt:
@@ -819,6 +819,23 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
             )
 
     cartones = get_cartones_cupon(evn, sec)
+
+    # Registrar en MSG_PROC con URL del visor
+    try:
+        dv_row = _fetchone(
+            'SELECT "INF_DV1","INF_DV2" FROM "INF_URL" WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+            (evn, int(sec))
+        )
+        if dv_row:
+            dv1, dv2 = str(dv_row[0] or ''), str(dv_row[1] or '')
+            url_visor = ('https://visor-gbl-production.up.railway.app/?id='
+                         + str(evn).zfill(5) + str(sec).zfill(6) + dv1 + dv2)
+            texto_msg = (f'se te asignó el cupón {str(sec).zfill(6)} '
+                         f'PARA EL BINGO {url_visor}')
+            registrar_msg_proc('ASIGNA-QR', celular, texto_msg, evn=evn, sec=int(sec))
+    except Exception:
+        pass
+
     return sec, cartones, cantidad, None
 
 
