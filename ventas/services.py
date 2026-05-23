@@ -1152,16 +1152,37 @@ def _enviar_email(to_addr, subject, body):
     log.info("SMTP OK enviado a %s", to_addr)
 
 
-def get_msg_proc(evn, solo_pendientes=True):
-    filtro = "AND \"MSG_MRKA\" IN ('P','X')" if solo_pendientes else ''
+def get_msg_idpr_opciones(evn):
+    rows = _fetchall(
+        'SELECT DISTINCT "MSG_IDPR" FROM "MSG_PROC" WHERE "MSG_EVN"=%s AND "MSG_IDPR" IS NOT NULL ORDER BY 1',
+        (evn,)
+    )
+    return [str(r[0]) for r in rows if r[0]]
+
+
+def get_msg_proc(evn, fecha=None, idpr=None, mrka=None):
+    conds  = ['"MSG_EVN" = %s']
+    params = [evn]
+    if fecha:
+        conds.append('"MSG_FCHA" = %s')
+        params.append(fecha)
+    if idpr:
+        conds.append('"MSG_IDPR" = %s')
+        params.append(idpr)
+    if mrka == 'PX':
+        conds.append("\"MSG_MRKA\" IN ('P','X')")
+    elif mrka:
+        conds.append('"MSG_MRKA" = %s')
+        params.append(mrka)
+    where = ' AND '.join(conds)
     rows = _fetchall(
         'SELECT "MSG_ID","MSG_FCHA","MSG_HORA","MSG_IDPR","MSG_SEC",'
         '       "MSG_REFE","MSG_TXTO","MSG_ERRO","MSG_MRKA"'
         ' FROM "MSG_PROC"'
-        ' WHERE "MSG_EVN" = %s ' + filtro +
+        ' WHERE ' + where +
         ' ORDER BY "MSG_FCHA" DESC, "MSG_HORA" DESC'
         ' LIMIT 200',
-        (evn,)
+        params
     )
     result = []
     for r in rows:

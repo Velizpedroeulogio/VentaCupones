@@ -25,18 +25,28 @@
     <div class="byl-error mb-2" style="font-size:12px;">Error al consultar: {{ error_db }}</div>
     {% endif %}
 
-    <!-- Filtro -->
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:12px;">
-        <span style="color:#555;">Mostrar:</span>
-        <a class="byl-btn" href="?{% if not solo_pend %}todos=1{% endif %}"
-           style="font-size:11px;padding:3px 9px;{% if solo_pend %}background:var(--byl-accent);color:white;{% endif %}">
-            Pendientes / Error
-        </a>
-        <a class="byl-btn" href="?todos=1"
-           style="font-size:11px;padding:3px 9px;{% if not solo_pend %}background:var(--byl-accent);color:white;{% endif %}">
-            Todos
-        </a>
-    </div>
+    <!-- Filtros -->
+    <form method="get" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <input type="date" name="fecha" value="{{ fil_fecha }}"
+               style="font-size:12px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;color:#333;">
+        <select name="idpr"
+                style="font-size:12px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;color:#333;">
+            <option value="">Todos los tipos</option>
+            {% for op in idpr_opciones %}
+            <option value="{{ op }}" {% if fil_idpr == op %}selected{% endif %}>{{ op }}</option>
+            {% endfor %}
+        </select>
+        <select name="mrka"
+                style="font-size:12px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;color:#333;">
+            <option value=""   {% if fil_mrka == ''   %}selected{% endif %}>Todos los estados</option>
+            <option value="PX" {% if fil_mrka == 'PX' %}selected{% endif %}>Pendiente / Error</option>
+            <option value="P"  {% if fil_mrka == 'P'  %}selected{% endif %}>Pendiente</option>
+            <option value="E"  {% if fil_mrka == 'E'  %}selected{% endif %}>Enviado</option>
+            <option value="X"  {% if fil_mrka == 'X'  %}selected{% endif %}>Error</option>
+        </select>
+        <button type="submit" class="byl-btn" style="font-size:11px;padding:4px 12px;">Filtrar</button>
+        <a href="?" class="byl-btn" style="font-size:11px;padding:4px 12px;">Limpiar</a>
+    </form>
 
     {% if mensajes %}
     <div id="msg-global" style="display:none;font-size:12px;margin-bottom:8px;padding:6px 10px;border-radius:4px;"></div>

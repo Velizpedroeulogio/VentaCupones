@@ -324,22 +324,32 @@ def adm_mensajes_view(request, evn):
         return redirect("ventas:adm_login", evn=evn)
     import logging
     log = logging.getLogger(__name__)
-    solo_pend = request.GET.get('todos', '') != '1'
+    fil_fecha = request.GET.get('fecha', '').strip()
+    fil_idpr  = request.GET.get('idpr',  '').strip()
+    fil_mrka  = request.GET.get('mrka',  '').strip()
     error_db  = ''
     try:
-        mensajes = svc.get_msg_proc(evn, solo_pendientes=solo_pend)
+        idpr_opciones = svc.get_msg_idpr_opciones(evn)
+        mensajes      = svc.get_msg_proc(evn,
+                            fecha=fil_fecha or None,
+                            idpr=fil_idpr   or None,
+                            mrka=fil_mrka   or None)
     except Exception as e:
         log.error("adm_mensajes error: %s", e, exc_info=True)
-        mensajes = []
-        error_db = str(e)
+        mensajes      = []
+        idpr_opciones = []
+        error_db      = str(e)
     return render(request, 'ventas/adm_mensajes.html', {
-        'evn':         evn,
-        'evento_desc': svc.get_evento(evn),
-        'img_evento':  svc.get_imagen_evento(evn),
-        'nombre':      request.session.get('adm_nombre', ''),
-        'mensajes':    mensajes,
-        'solo_pend':   solo_pend,
-        'error_db':    error_db,
+        'evn':           evn,
+        'evento_desc':   svc.get_evento(evn),
+        'img_evento':    svc.get_imagen_evento(evn),
+        'nombre':        request.session.get('adm_nombre', ''),
+        'mensajes':      mensajes,
+        'idpr_opciones': idpr_opciones,
+        'fil_fecha':     fil_fecha,
+        'fil_idpr':      fil_idpr,
+        'fil_mrka':      fil_mrka,
+        'error_db':      error_db,
     })
 
 
