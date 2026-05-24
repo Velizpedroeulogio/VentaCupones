@@ -377,6 +377,34 @@ def adm_logout_view(request, evn):
     return redirect("ventas:adm_login", evn=evn)
 
 
+def adm_recalcular_hmac(request, evn):
+    if request.session.get("adm_evn") != evn:
+        return redirect("ventas:adm_login", evn=evn)
+    from django.db import connection
+    from ventas.services import calcular_hmac_cupon
+    with connection.cursor() as cur:
+        cur.execute('SELECT "INF_EVN", "INF_SEC" FROM "INF_URL" ORDER BY "INF_EVN", "INF_SEC"')
+        rows = cur.fetchall()
+    total = len(rows)
+    actualizados = 0
+    sin_clave = 0
+    with connection.cursor() as cur:
+        for evn_r, sec_r in rows:
+            codigo = calcular_hmac_cupon(evn_r, sec_r)
+            if not codigo:
+                sin_clave += 1
+                continue
+            cur.execute(
+                'UPDATE "INF_URL" SET "INF_ADIC"=%s WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+                (codigo, evn_r, sec_r)
+            )
+            actualizados += 1
+    msg = f'Listo: {actualizados} de {total} actualizados.'
+    if sin_clave:
+        msg += f' Sin clave: {sin_clave}.'
+    return JsonResponse({'ok': True, 'msg': msg, 'total': total, 'actualizados': actualizados})
+
+
 @csrf_exempt
 def adm_certificar_api(request, evn):
     if request.method != "POST":
