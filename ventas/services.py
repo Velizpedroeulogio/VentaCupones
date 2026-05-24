@@ -6,7 +6,9 @@ from django.db import connection, transaction
 
 _KEY1 = os.environ.get("GBYL_KEY1", "dvtcksqonz")
 _KEY2 = os.environ.get("GBYL_KEY2", "ABCDEFGHIJ")
-_CUPON_HMAC_KEY = os.environ.get("CUPON_HMAC_KEY", "")
+_CUPON_HMAC_KEY     = os.environ.get("CUPON_HMAC_KEY", "")
+_WA_PHONE_NUMBER_ID = os.environ.get("WA_PHONE_NUMBER_ID", "")
+_WA_ACCESS_TOKEN    = os.environ.get("WA_ACCESS_TOKEN", "")
 
 
 def calcular_hmac_cupon(evn, sec):
@@ -855,6 +857,8 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
             texto_msg = (f'se te asignó el cupón {str(sec).zfill(6)} '
                          f'PARA EL BINGO {url_visor}')
             registrar_msg_proc('ASIGNA-QR', celular, texto_msg, evn=evn, sec=int(sec))
+            if _WA_PHONE_NUMBER_ID and celular:
+                enviar_notif_meta(evn, sec, celular, nom)
     except Exception:
         pass
 
@@ -1172,6 +1176,87 @@ def _enviar_email(to_addr, subject, body):
     log.info("SMTP OK enviado a %s", to_addr)
 
 
+def _enviar_whatsapp_meta(celular, nombre, num_cupon, desc_evento, fecha_sorteo, url_id):
+    # Plantilla: bingo_abg  variables: {{1}}=nombre {{2}}=cupón {{3}}=evento {{4}}=fecha_sorteo
+    # Botón CTA URL dinámica: sufijo url_id  (base configurada en la plantilla Meta)
+    # Ajustar componentes según plantilla aprobada
+    import re
+    import requests as req
+    if not _WA_PHONE_NUMBER_ID or not _WA_ACCESS_TOKEN:
+        raise ValueError("WA_PHONE_NUMBER_ID o WA_ACCESS_TOKEN no configurados")
+    digits = re.sub(r'\D', '', celular)
+    if not digits.startswith('54'):
+        digits = '54' + digits
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": digits,
+        "type": "template",
+        "template": {
+            "name": "bingo_abg",
+            "language": {"code": "es_AR"},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": nombre},
+                        {"type": "text", "text": num_cupon},
+                        {"type": "text", "text": desc_evento},
+                        {"type": "text", "text": fecha_sorteo},
+                    ]
+                },
+                {
+                    "type": "button",
+                    "sub_type": "url",
+                    "index": "0",
+                    "parameters": [{"type": "text", "text": url_id}]
+                }
+            ]
+        }
+    }
+    resp = req.post(
+        f"https://graph.facebook.com/v20.0/{_WA_PHONE_NUMBER_ID}/messages",
+        headers={
+            "Authorization": f"Bearer {_WA_ACCESS_TOKEN}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=10,
+    )
+    if resp.status_code not in (200, 201):
+        raise ValueError(f"Meta API {resp.status_code}: {resp.text[:200]}")
+
+
+def enviar_notif_meta(evn, sec, celular, nombre):
+    """Envía plantilla bingo_abg via Meta Graph API y registra en MSG_PROC. No lanza excepciones."""
+    import logging
+    log = logging.getLogger(__name__)
+    num_cupon = str(sec).zfill(6)
+    try:
+        desc_evento  = get_evento(evn)
+        pvt          = get_pvt_sort(evn)
+        fecha_sorteo = fmt_fecha(pvt['pvt_fchd']) if pvt and pvt.get('pvt_fchd') else ''
+        dv_row = _fetchone(
+            'SELECT "INF_DV1","INF_DV2","INF_ADIC" FROM "INF_URL"'
+            ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+            (evn, int(sec))
+        )
+        if dv_row:
+            dv1  = str(dv_row[0] or '')
+            dv2  = str(dv_row[1] or '')
+            adic = str(dv_row[2] or '')
+            url_id = str(evn).zfill(5) + num_cupon + dv1 + dv2 + adic
+        else:
+            url_id = _gen_url_id(evn, sec)
+        _enviar_whatsapp_meta(celular, nombre, num_cupon, desc_evento, fecha_sorteo, url_id)
+        registrar_msg_proc('META-WA', f'{celular}|', f'bingo_abg {nombre} cupon {num_cupon}',
+                           evn=evn, sec=int(sec))
+        log.info("META-WA OK evn=%s sec=%s cel=%s", evn, sec, celular)
+    except Exception as e:
+        log.error("META-WA error evn=%s sec=%s: %s", evn, sec, e)
+        registrar_msg_proc('META-WA', f'{celular}|', f'bingo_abg {nombre} cupon {num_cupon}',
+                           evn=evn, sec=int(sec), erro=str(e)[:500])
+
+
 def get_msg_idpr_opciones(evn):
     rows = _fetchall(
         'SELECT DISTINCT "MSG_IDPR" FROM "MSG_PROC" WHERE "MSG_EVN"=%s AND "MSG_IDPR" IS NOT NULL ORDER BY 1',
@@ -1248,6 +1333,17 @@ def reenviar_msg_proc(evn, msg_id, via):
             if not mail:
                 return False, 'Sin dirección de email'
             _enviar_email(mail, f'Cupón N° {sec}', txto)
+        elif via == 'T':
+            if not cel:
+                return False, 'Sin número de WhatsApp'
+            sec_int = int(sec) if sec.isdigit() else 0
+            row_evnc = _fetchone(
+                'SELECT "EVNC_NOM" FROM "EVNC_CAR"'
+                ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s LIMIT 1',
+                (evn, sec_int)
+            )
+            nombre_evnc = str(row_evnc[0] or '') if row_evnc else ''
+            enviar_notif_meta(evn, sec_int, cel, nombre_evnc)
         else:
             if not cel:
                 return False, 'Sin número de WhatsApp'
@@ -1299,6 +1395,14 @@ def enviar_notif_venta(evn, sec, persona, pvt):
         emsj_tpl = str(pvt.get('emsj') or '').strip()
         wpro     = str(pvt.get('wpro') or 'M').strip()
         log.info("NOTIF evn=%s sec=%s wpro=%s burl=%s", evn, sec, wpro, burl)
+        if wpro == 'W':
+            nombre  = str(persona.get('per_nombre') or '')
+            celular = str(persona.get('per_celular') or '').strip()
+            if celular:
+                enviar_notif_meta(evn, sec, celular, nombre)
+            else:
+                log.warning("NOTIF wpro=W pero persona sin celular")
+            return
         if not burl or not wmsg_tpl:
             log.warning("NOTIF sin configurar: burl=%r wmsg=%r", burl, wmsg_tpl)
             return

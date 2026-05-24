@@ -365,7 +365,7 @@ def adm_reenviar_api(request, evn):
         via    = str(body.get('via', 'M')).strip()
     except Exception:
         return JsonResponse({'ok': False, 'error': 'Datos inválidos'})
-    if not msg_id or via not in ('M', 'W'):
+    if not msg_id or via not in ('M', 'W', 'T'):
         return JsonResponse({'ok': False, 'error': 'Parámetros inválidos'})
     ok, msg = svc.reenviar_msg_proc(evn, msg_id, via)
     return JsonResponse({'ok': ok, 'msg': msg})

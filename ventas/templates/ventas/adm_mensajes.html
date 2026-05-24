@@ -97,6 +97,8 @@
                     {% if m.cel %}
                     <button class="byl-btn" onclick="event.stopPropagation();reenviar({{ m.id }},'W')"
                             style="font-size:10px;padding:2px 6px;">WhatsApp</button>
+                    <button class="byl-btn" onclick="event.stopPropagation();reenviar({{ m.id }},'T')"
+                            style="font-size:10px;padding:2px 6px;background:#1565c0;color:#fff;">Plantilla</button>
                     {% endif %}
                     {% if not m.mail and not m.cel %}
                     <span style="font-size:10px;color:#999;">Sin destino</span>
@@ -176,12 +178,24 @@ function verDetalle(id) {
                  style="background:#f5f5f5;border-radius:4px;padding:10px;font-size:12px;
                         word-break:break-word;white-space:pre-wrap;line-height:1.5;
                         max-height:200px;overflow-y:auto;margin-bottom:10px;">${d.txto || '—'}</div>
-            <button class="byl-btn" onclick="copiarTexto()"
-                    style="font-size:11px;padding:5px 16px;">Copiar texto</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                <button class="byl-btn" onclick="copiarTexto()"
+                        style="font-size:11px;padding:5px 16px;">Copiar texto</button>
+                <button id="det-btn-wa" class="byl-btn" onclick="reenviarDesdeDetalle('W')"
+                        style="font-size:11px;padding:5px 12px;display:none;">Reenviar WA</button>
+                <button id="det-btn-tp" class="byl-btn" onclick="reenviarDesdeDetalle('T')"
+                        style="font-size:11px;padding:5px 12px;background:#1565c0;color:#fff;display:none;">Plantilla WA</button>
+                <button id="det-btn-ml" class="byl-btn" onclick="reenviarDesdeDetalle('M')"
+                        style="font-size:11px;padding:5px 12px;display:none;">Reenviar Email</button>
+            </div>
             <span id="det-ok" style="font-size:11px;color:#2e7d32;margin-left:10px;display:none;">✓ Copiado</span>
         </div>`;
     document.getElementById('det-body').innerHTML = html;
     document.getElementById('det-overlay').style.display = '';
+    document.getElementById('det-overlay').dataset.msgId = id;
+    document.getElementById('det-btn-wa').style.display = d.cel ? '' : 'none';
+    document.getElementById('det-btn-tp').style.display = d.cel ? '' : 'none';
+    document.getElementById('det-btn-ml').style.display = d.mail ? '' : 'none';
 }
 
 function cerrarDetalle() {
@@ -212,6 +226,12 @@ function fallbackCopiar(txto, ok) {
     document.body.removeChild(ta);
     ok.style.display = '';
     setTimeout(() => { ok.style.display = 'none'; }, 2000);
+}
+
+async function reenviarDesdeDetalle(via) {
+    const msgId = parseInt(document.getElementById('det-overlay').dataset.msgId || '0');
+    if (!msgId) return;
+    await reenviar(msgId, via);
 }
 
 async function reenviar(msgId, via) {
