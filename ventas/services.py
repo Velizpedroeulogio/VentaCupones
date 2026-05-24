@@ -1244,6 +1244,15 @@ def enviar_notif_meta(evn, sec, celular, nombre):
             dv1  = str(dv_row[0] or '')
             dv2  = str(dv_row[1] or '')
             adic = str(dv_row[2] or '')
+            if not adic:
+                adic = calcular_hmac_cupon(evn, sec)
+                if adic:
+                    with connection.cursor() as cur:
+                        cur.execute(
+                            'UPDATE "INF_URL" SET "INF_ADIC"=%s'
+                            ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+                            (adic, evn, int(sec))
+                        )
             url_id = str(evn).zfill(5) + num_cupon + dv1 + dv2 + adic
         else:
             url_id = _gen_url_id(evn, sec)
