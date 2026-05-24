@@ -836,24 +836,18 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
 
     cartones = get_cartones_cupon(evn, sec)
 
-    # Calcular HMAC, guardarlo en INF_URL y armar URL del visor
+    # Armar URL del visor con INF_ADIC (ya poblado desde SQLite via TransferirINF_URL)
     try:
         dv_row = _fetchone(
-            'SELECT "INF_DV1","INF_DV2" FROM "INF_URL" WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+            'SELECT "INF_DV1","INF_DV2","INF_ADIC" FROM "INF_URL" WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
             (evn, int(sec))
         )
         if dv_row:
-            dv1, dv2   = str(dv_row[0] or ''), str(dv_row[1] or '')
-            hmac_code  = calcular_hmac_cupon(evn, sec)
-            if hmac_code:
-                with connection.cursor() as cur:
-                    cur.execute(
-                        'UPDATE "INF_URL" SET "INF_ADIC"=%s'
-                        ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
-                        (hmac_code, evn, int(sec))
-                    )
+            dv1  = str(dv_row[0] or '')
+            dv2  = str(dv_row[1] or '')
+            adic = str(dv_row[2] or '')
             url_visor = ('https://visor-gbl-production.up.railway.app/?id='
-                         + str(evn).zfill(5) + str(sec).zfill(6) + dv1 + dv2 + hmac_code)
+                         + str(evn).zfill(5) + str(sec).zfill(6) + dv1 + dv2 + adic)
             texto_msg = (f'se te asignó el cupón {str(sec).zfill(6)} '
                          f'PARA EL BINGO {url_visor}')
             registrar_msg_proc('ASIGNA-QR', celular, texto_msg, evn=evn, sec=int(sec))
@@ -1244,15 +1238,6 @@ def enviar_notif_meta(evn, sec, celular, nombre):
             dv1  = str(dv_row[0] or '')
             dv2  = str(dv_row[1] or '')
             adic = str(dv_row[2] or '')
-            if not adic:
-                adic = calcular_hmac_cupon(evn, sec)
-                if adic:
-                    with connection.cursor() as cur:
-                        cur.execute(
-                            'UPDATE "INF_URL" SET "INF_ADIC"=%s'
-                            ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
-                            (adic, evn, int(sec))
-                        )
             url_id = str(evn).zfill(5) + num_cupon + dv1 + dv2 + adic
         else:
             url_id = _gen_url_id(evn, sec)
