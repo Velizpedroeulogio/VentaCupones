@@ -27,7 +27,6 @@ urlpatterns = [
     path("<int:evn>/adm/certificar/",        views.adm_certificar_api,   name="adm_certificar"),
     path("<int:evn>/adm/mensajes/",          views.adm_mensajes_view,     name="adm_mensajes"),
     path("<int:evn>/adm/mensajes/reenviar/", views.adm_reenviar_api,      name="adm_reenviar"),
-    path("<int:evn>/adm/recalcular-hmac/",  views.adm_recalcular_hmac,   name="adm_recalcular_hmac"),
     path("<int:evn>/rendicion/",             views.rendicion_view,        name="rendicion"),
     path("<int:evn>/rendicion/confirmar/",   views.rendicion_confirmar_api, name="rendicion_confirmar"),
     path("<int:evn>/qr/",                    views.qr_view,               name="qr"),

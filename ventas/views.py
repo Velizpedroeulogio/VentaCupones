@@ -377,39 +377,6 @@ def adm_logout_view(request, evn):
     return redirect("ventas:adm_login", evn=evn)
 
 
-def adm_recalcular_hmac(request, evn):
-    if request.session.get("adm_evn") != evn:
-        return redirect("ventas:adm_login", evn=evn)
-    try:
-        from django.db import connection
-        from ventas.services import calcular_hmac_cupon
-        # 1. Traer todos los registros
-        with connection.cursor() as cur:
-            cur.execute('SELECT "INF_EVN", "INF_SEC" FROM "INF_URL" ORDER BY "INF_EVN", "INF_SEC"')
-            rows = cur.fetchall()
-        total = len(rows)
-        # 2. Calcular todos los HMACs en memoria (sin DB)
-        updates   = []
-        sin_clave = 0
-        for evn_r, sec_r in rows:
-            codigo = calcular_hmac_cupon(evn_r, sec_r)
-            if codigo:
-                updates.append((codigo, evn_r, sec_r))
-            else:
-                sin_clave += 1
-        # 3. Un solo executemany para todos los UPDATEs
-        with connection.cursor() as cur:
-            cur.executemany(
-                'UPDATE "INF_URL" SET "INF_ADIC"=%s WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
-                updates
-            )
-        msg = f'Listo: {len(updates)} de {total} actualizados.'
-        if sin_clave:
-            msg += f' Sin clave HMAC: {sin_clave}.'
-        return JsonResponse({'ok': True, 'msg': msg, 'total': total, 'actualizados': len(updates)})
-    except Exception as exc:
-        import traceback
-        return JsonResponse({'ok': False, 'error': str(exc), 'detalle': traceback.format_exc()})
 
 
 @csrf_exempt
