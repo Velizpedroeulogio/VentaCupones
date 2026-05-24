@@ -1,9 +1,21 @@
 import os
+import hmac as _hmac_mod
+import hashlib
 from datetime import datetime
 from django.db import connection, transaction
 
 _KEY1 = os.environ.get("GBYL_KEY1", "dvtcksqonz")
 _KEY2 = os.environ.get("GBYL_KEY2", "ABCDEFGHIJ")
+_CUPON_HMAC_KEY = os.environ.get("CUPON_HMAC_KEY", "")
+
+
+def calcular_hmac_cupon(evn, sec):
+    """Devuelve 8 caracteres hex derivados de (evn, sec) con clave secreta CUPON_HMAC_KEY.
+    Si la clave no está configurada devuelve cadena vacía."""
+    if not _CUPON_HMAC_KEY:
+        return ""
+    msg = f"{int(evn):05d}{int(sec):06d}".encode()
+    return _hmac_mod.new(_CUPON_HMAC_KEY.encode(), msg, hashlib.sha256).hexdigest()[:8]
 
 
 # ------------------------------------------------------------------ DB HELPERS
@@ -822,16 +834,24 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
 
     cartones = get_cartones_cupon(evn, sec)
 
-    # Registrar en MSG_PROC con URL del visor
+    # Calcular HMAC, guardarlo en INF_URL y armar URL del visor
     try:
         dv_row = _fetchone(
             'SELECT "INF_DV1","INF_DV2" FROM "INF_URL" WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
             (evn, int(sec))
         )
         if dv_row:
-            dv1, dv2 = str(dv_row[0] or ''), str(dv_row[1] or '')
+            dv1, dv2   = str(dv_row[0] or ''), str(dv_row[1] or '')
+            hmac_code  = calcular_hmac_cupon(evn, sec)
+            if hmac_code:
+                with connection.cursor() as cur:
+                    cur.execute(
+                        'UPDATE "INF_URL" SET "INF_ADIC"=%s'
+                        ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+                        (hmac_code, evn, int(sec))
+                    )
             url_visor = ('https://visor-gbl-production.up.railway.app/?id='
-                         + str(evn).zfill(5) + str(sec).zfill(6) + dv1 + dv2)
+                         + str(evn).zfill(5) + str(sec).zfill(6) + dv1 + dv2 + hmac_code)
             texto_msg = (f'se te asignó el cupón {str(sec).zfill(6)} '
                          f'PARA EL BINGO {url_visor}')
             registrar_msg_proc('ASIGNA-QR', celular, texto_msg, evn=evn, sec=int(sec))
