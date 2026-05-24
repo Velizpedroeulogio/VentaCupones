@@ -409,7 +409,7 @@ def adm_recalcular_hmac(request, evn):
         return JsonResponse({'ok': True, 'msg': msg, 'total': total, 'actualizados': len(updates)})
     except Exception as exc:
         import traceback
-        return JsonResponse({'ok': False, 'error': str(exc), 'detalle': traceback.format_exc()}, status=500)
+        return JsonResponse({'ok': False, 'error': str(exc), 'detalle': traceback.format_exc()})
 
 
 @csrf_exempt
