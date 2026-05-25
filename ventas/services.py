@@ -1248,9 +1248,17 @@ def enviar_notif_meta(evn, sec, celular, nombre):
             url_id = str(evn).zfill(5) + num_cupon + dv1 + dv2 + adic
         else:
             url_id = _gen_url_id(evn, sec)
+        pvt_burl = str(pvt.get('burl') or 'https://visor-gbl-production.up.railway.app').rstrip('/')
+        url_full = f"{pvt_burl}/?id={url_id}"
+        txto_msg = (
+            f"Hola {nombre}!\n\n"
+            f"Tu cupón N° {num_cupon} de {entidad} está confirmado para el evento:\n"
+            f"{evento}\n"
+            + (f"\nFecha: {fecha_sorteo}\n" if fecha_sorteo else '') +
+            f"\nPodés verlo en:\n{url_full}"
+        )
         _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, fecha_sorteo, url_id)
-        registrar_msg_proc('META-WA', f'{celular}|', f'bingo_abg {nombre} cupon {num_cupon}',
-                           evn=evn, sec=int(sec))
+        registrar_msg_proc('META-WA', f'{celular}|', txto_msg, evn=evn, sec=int(sec))
         log.info("META-WA OK evn=%s sec=%s cel=%s", evn, sec, celular)
     except Exception as e:
         log.error("META-WA error evn=%s sec=%s: %s", evn, sec, e)
