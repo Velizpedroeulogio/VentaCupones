@@ -275,8 +275,10 @@ let _previewMsgId = 0;
 
 async function previewPlantilla(msgId) {
     _previewMsgId = msgId;
-    document.getElementById('prev-body').innerHTML =
-        '<div style="text-align:center;padding:20px;color:#888;font-size:13px;">Cargando…</div>';
+    const elCel  = document.getElementById('prev-cel');
+    const elBurb = document.getElementById('prev-burbuja');
+    elCel.textContent  = '';
+    elBurb.innerHTML   = '<div style="text-align:center;padding:20px;color:#888;font-size:13px;">Cargando…</div>';
     document.getElementById('prev-overlay').style.display = '';
     try {
         const r = await fetch(URL_PREVIEW, {
@@ -289,11 +291,10 @@ async function previewPlantilla(msgId) {
             d = await r.json();
         } catch(_) {
             const txt = await r.text().catch(() => '');
-            document.getElementById('prev-body').innerHTML =
-                '<div style="color:red;padding:10px;">HTTP ' + r.status + ' — respuesta no JSON:<br><pre style="font-size:10px;white-space:pre-wrap;max-height:120px;overflow:auto;">' + esc(txt.slice(0,500)) + '</pre></div>';
+            elBurb.innerHTML = '<div style="color:red;">HTTP ' + r.status + ' — respuesta no JSON:<br><pre style="font-size:10px;white-space:pre-wrap;max-height:120px;overflow:auto;">' + esc(txt.slice(0,500)) + '</pre></div>';
             return;
         }
-        if (!d.ok) { document.getElementById('prev-body').innerHTML = '<div style="color:red;padding:10px;">'+esc(d.error||'Error')+'</div>'; return; }
+        if (!d.ok) { elBurb.innerHTML = '<div style="color:red;">' + esc(d.error || 'Error') + '</div>'; return; }
         const txt =
             `Hola ${d.nombre}!\n\n` +
             `Tu cupón N° ${d.num_cupon} de *${d.entidad}* está confirmado para el evento:\n` +
@@ -301,10 +302,10 @@ async function previewPlantilla(msgId) {
             (d.fecha_sorteo ? `\nFecha: ${d.fecha_sorteo}\n` : '') +
             `\nPodés verlo en:\n${d.url}`;
         const txtHtml = esc(txt).replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-        document.getElementById('prev-cel').textContent  = d.celular ? '📱 ' + d.celular : '';
-        document.getElementById('prev-burbuja').innerHTML = txtHtml;
+        elCel.textContent = d.celular ? '📱 ' + d.celular : '';
+        elBurb.innerHTML  = txtHtml;
     } catch(e) {
-        document.getElementById('prev-body').innerHTML = '<div style="color:red;padding:10px;">Error de red: ' + esc(String(e)) + '</div>';
+        elBurb.innerHTML = '<div style="color:red;">Error: ' + esc(String(e)) + '</div>';
     }
 }
 
