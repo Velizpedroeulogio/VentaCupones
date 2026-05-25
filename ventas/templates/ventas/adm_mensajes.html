@@ -97,7 +97,7 @@
                     {% if m.cel %}
                     <button class="byl-btn" onclick="event.stopPropagation();reenviar({{ m.id }},'W')"
                             style="font-size:10px;padding:2px 6px;">WhatsApp</button>
-                    <button class="byl-btn" onclick="event.stopPropagation();reenviar({{ m.id }},'T')"
+                    <button class="byl-btn" onclick="event.stopPropagation();previewPlantilla({{ m.id }})"
                             style="font-size:10px;padding:2px 6px;background:#1565c0;color:#fff;">Plantilla</button>
                     {% endif %}
                     {% if not m.mail and not m.cel %}
@@ -120,6 +120,41 @@
 
 </div>
 
+<!-- Modal preview plantilla -->
+<div id="prev-overlay" onclick="cerrarPreview()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1100;padding:16px;overflow-y:auto;">
+    <div onclick="event.stopPropagation()"
+         style="background:#e5ddd5;border-radius:12px;max-width:420px;margin:40px auto;box-shadow:0 4px 24px rgba(0,0,0,0.3);overflow:hidden;">
+        <!-- Barra superior estilo WhatsApp -->
+        <div style="background:#075e54;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#128c7e;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
+            <div>
+                <div style="font-weight:bold;font-size:13px;">Vista previa — Plantilla bingo_abg</div>
+                <div id="prev-cel" style="font-size:11px;opacity:.8;"></div>
+            </div>
+            <button onclick="cerrarPreview()" style="margin-left:auto;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">✕</button>
+        </div>
+        <!-- Chat background -->
+        <div id="prev-body" style="padding:16px;min-height:120px;">
+            <!-- Burbuja mensaje recibido -->
+            <div style="display:flex;justify-content:flex-start;">
+                <div style="background:#fff;border-radius:0 8px 8px 8px;padding:10px 14px;max-width:90%;
+                            box-shadow:0 1px 2px rgba(0,0,0,0.15);font-size:13px;line-height:1.6;color:#111;">
+                    <div id="prev-burbuja"></div>
+                    <div style="text-align:right;font-size:10px;color:#999;margin-top:6px;">ahora</div>
+                </div>
+            </div>
+        </div>
+        <!-- Botones -->
+        <div style="background:#f0f0f0;padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #ddd;">
+            <button class="byl-btn" onclick="cerrarPreview()"
+                    style="font-size:12px;padding:6px 16px;">Cerrar</button>
+            <button class="byl-btn" onclick="enviarDesdePreview()"
+                    style="font-size:12px;padding:6px 16px;background:#075e54;color:#fff;border-color:#075e54;">Enviar</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal detalle -->
 <div id="det-overlay" onclick="cerrarDetalle()"
      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;padding:16px;overflow-y:auto;">
@@ -135,6 +170,7 @@
 
 <script>
 const URL_REENVIAR = "{% url 'ventas:adm_reenviar' evn %}";
+const URL_PREVIEW  = "{% url 'ventas:adm_preview_plantilla' evn %}";
 const CSRF = "{{ csrf_token }}";
 
 const MSG_DATA = {};
@@ -183,7 +219,7 @@ function verDetalle(id) {
                         style="font-size:11px;padding:5px 16px;">Copiar texto</button>
                 <button id="det-btn-wa" class="byl-btn" onclick="reenviarDesdeDetalle('W')"
                         style="font-size:11px;padding:5px 12px;display:none;">Reenviar WA</button>
-                <button id="det-btn-tp" class="byl-btn" onclick="reenviarDesdeDetalle('T')"
+                <button id="det-btn-tp" class="byl-btn" onclick="previewPlantillaDesdeDetalle()"
                         style="font-size:11px;padding:5px 12px;background:#1565c0;color:#fff;display:none;">Plantilla WA</button>
                 <button id="det-btn-ml" class="byl-btn" onclick="reenviarDesdeDetalle('M')"
                         style="font-size:11px;padding:5px 12px;display:none;">Reenviar Email</button>
@@ -232,6 +268,57 @@ async function reenviarDesdeDetalle(via) {
     const msgId = parseInt(document.getElementById('det-overlay').dataset.msgId || '0');
     if (!msgId) return;
     await reenviar(msgId, via);
+}
+
+// ── Preview plantilla Meta ──
+let _previewMsgId = 0;
+
+async function previewPlantilla(msgId) {
+    _previewMsgId = msgId;
+    document.getElementById('prev-body').innerHTML =
+        '<div style="text-align:center;padding:20px;color:#888;font-size:13px;">Cargando…</div>';
+    document.getElementById('prev-overlay').style.display = '';
+    try {
+        const r = await fetch(URL_PREVIEW, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({msg_id: msgId})
+        });
+        const d = await r.json();
+        if (!d.ok) { document.getElementById('prev-body').innerHTML = '<div style="color:red;padding:10px;">'+esc(d.error||'Error')+'</div>'; return; }
+        const txt =
+            `Hola ${d.nombre}!\n\n` +
+            `Tu cupón N° ${d.num_cupon} de *${d.entidad}* está confirmado para el evento:\n` +
+            `*${d.evento}*\n` +
+            (d.fecha_sorteo ? `\nFecha: ${d.fecha_sorteo}\n` : '') +
+            `\nPodés verlo en:\n${d.url}`;
+        const txtHtml = esc(txt).replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+        document.getElementById('prev-cel').textContent  = d.celular ? '📱 ' + d.celular : '';
+        document.getElementById('prev-burbuja').innerHTML = txtHtml;
+    } catch(e) {
+        document.getElementById('prev-body').innerHTML = '<div style="color:red;padding:10px;">Error de conexión</div>';
+    }
+}
+
+function previewPlantillaDesdeDetalle() {
+    const msgId = parseInt(document.getElementById('det-overlay').dataset.msgId || '0');
+    if (!msgId) return;
+    cerrarDetalle();
+    previewPlantilla(msgId);
+}
+
+function cerrarPreview() {
+    document.getElementById('prev-overlay').style.display = 'none';
+}
+
+async function enviarDesdePreview() {
+    if (!_previewMsgId) return;
+    cerrarPreview();
+    await reenviar(_previewMsgId, 'T');
+}
+
+function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 async function reenviar(msgId, via) {

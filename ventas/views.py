@@ -258,9 +258,10 @@ def movimientos_view(request, evn, prd):
 
 # ================================================================ ADMIN
 def adm_login_view(request, evn):
+    info = svc.get_evento(evn)
     return render(request, "ventas/adm_login.html", {
         "evn":         evn,
-        "evento_desc": svc.get_evento(evn),
+        "evento_desc": info['evento'],
         "img_evento":  svc.get_imagen_evento(evn),
     })
 
@@ -341,7 +342,7 @@ def adm_mensajes_view(request, evn):
         error_db      = str(e)
     return render(request, 'ventas/adm_mensajes.html', {
         'evn':           evn,
-        'evento_desc':   svc.get_evento(evn),
+        'evento_desc':   svc.get_evento(evn)['evento'],
         'img_evento':    svc.get_imagen_evento(evn),
         'nombre':        request.session.get('adm_nombre', ''),
         'mensajes':      mensajes,
@@ -369,6 +370,23 @@ def adm_reenviar_api(request, evn):
         return JsonResponse({'ok': False, 'error': 'Parámetros inválidos'})
     ok, msg = svc.reenviar_msg_proc(evn, msg_id, via)
     return JsonResponse({'ok': ok, 'msg': msg})
+
+
+@csrf_exempt
+def adm_preview_plantilla_api(request, evn):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+    if request.session.get('adm_evn') != evn:
+        return JsonResponse({'ok': False, 'error': 'Sesión inválida'})
+    try:
+        body   = json.loads(request.body)
+        msg_id = int(body.get('msg_id', 0))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Datos inválidos'})
+    data = svc.get_preview_plantilla(evn, msg_id)
+    if data is None:
+        return JsonResponse({'ok': False, 'error': 'Registro no encontrado'})
+    return JsonResponse({'ok': True, **data})
 
 
 def adm_logout_view(request, evn):

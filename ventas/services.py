@@ -1312,6 +1312,58 @@ def get_msg_proc(evn, fecha=None, idpr=None, mrka=None):
     return result
 
 
+def get_preview_plantilla(evn, msg_id):
+    """Devuelve los datos para preview de plantilla Meta de un MSG_PROC."""
+    row = _fetchone(
+        'SELECT "MSG_REFE","MSG_SEC" FROM "MSG_PROC"'
+        ' WHERE "MSG_ID"=%s AND "MSG_EVN"=%s',
+        (msg_id, evn)
+    )
+    if not row:
+        return None
+    refe   = str(row[0] or '')
+    sec    = int(row[1]) if row[1] else 0
+    partes = refe.split('|')
+    cel    = partes[0].strip() if partes else ''
+
+    evn_info     = get_evento(evn)
+    entidad      = evn_info['entidad']
+    evento       = evn_info['evento']
+    num_cupon    = str(sec).zfill(6)
+
+    row_nom = _fetchone(
+        'SELECT "EVNC_NOM" FROM "EVNC_CAR"'
+        ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s LIMIT 1',
+        (evn, sec)
+    )
+    nombre = str(row_nom[0] or '') if row_nom else ''
+
+    pvt          = get_pvt_sort(evn)
+    burl         = str(pvt.get('burl') or 'https://visor-gbl-production.up.railway.app').rstrip('/')
+    fecha_sorteo = fmt_fecha(pvt['pvt_fchd']) if pvt and pvt.get('pvt_fchd') else ''
+
+    dv_row = _fetchone(
+        'SELECT "INF_DV1","INF_DV2","INF_ADIC" FROM "INF_URL"'
+        ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+        (evn, sec)
+    )
+    if dv_row:
+        url_id = str(evn).zfill(5) + num_cupon + str(dv_row[0] or '') + str(dv_row[1] or '') + str(dv_row[2] or '')
+    else:
+        url_id = _gen_url_id(evn, sec)
+    url = f"{burl}/?id={url_id}"
+
+    return {
+        'nombre':       nombre,
+        'entidad':      entidad,
+        'evento':       evento,
+        'num_cupon':    num_cupon,
+        'celular':      cel,
+        'fecha_sorteo': fecha_sorteo,
+        'url':          url,
+    }
+
+
 def reenviar_msg_proc(evn, msg_id, via):
     """Reenvía un MSG_PROC. via='M' email, via='W' whatsapp. Actualiza MSG_MRKA."""
     row = _fetchone(
