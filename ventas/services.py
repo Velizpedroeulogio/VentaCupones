@@ -70,10 +70,15 @@ def fmt_fecha(fecha):
 # ------------------------------------------------------------------ EVENTO
 def get_evento(evn):
     row = _fetchone(
-        'SELECT "EVN_DSC" FROM "EVN_DEF" WHERE "EVN_NUM" = %s',
+        'SELECT A."EVN_DSC", B."ENT_DSC"'
+        ' FROM "EVN_DEF" A'
+        ' LEFT JOIN "ENT_DEF" B ON B."ENT_NUM" = A."ENT_NUM"'
+        ' WHERE A."EVN_NUM" = %s',
         (evn,)
     )
-    return str(row[0] or "") if row else ""
+    if row:
+        return {'evento': str(row[0] or ''), 'entidad': str(row[1] or '')}
+    return {'evento': '', 'entidad': ''}
 
 
 # ------------------------------------------------------------------ EVENTO DEFAULTS
@@ -1170,10 +1175,9 @@ def _enviar_email(to_addr, subject, body):
     log.info("SMTP OK enviado a %s", to_addr)
 
 
-def _enviar_whatsapp_meta(celular, nombre, num_cupon, desc_evento, fecha_sorteo, url_id):
-    # Plantilla: bingo_abg  variables: {{1}}=nombre {{2}}=cupón {{3}}=evento {{4}}=fecha_sorteo
+def _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, fecha_sorteo, url_id):
+    # Plantilla: bingo_abg  variables: {{1}}=nombre {{2}}=cupón {{3}}=entidad {{4}}=evento {{5}}=fecha_sorteo
     # Botón CTA URL dinámica: sufijo url_id  (base configurada en la plantilla Meta)
-    # Ajustar componentes según plantilla aprobada
     import re
     import requests as req
     if not _WA_PHONE_NUMBER_ID or not _WA_ACCESS_TOKEN:
@@ -1194,7 +1198,8 @@ def _enviar_whatsapp_meta(celular, nombre, num_cupon, desc_evento, fecha_sorteo,
                     "parameters": [
                         {"type": "text", "text": nombre},
                         {"type": "text", "text": num_cupon},
-                        {"type": "text", "text": desc_evento},
+                        {"type": "text", "text": entidad},
+                        {"type": "text", "text": evento},
                         {"type": "text", "text": fecha_sorteo},
                     ]
                 },
@@ -1226,7 +1231,9 @@ def enviar_notif_meta(evn, sec, celular, nombre):
     log = logging.getLogger(__name__)
     num_cupon = str(sec).zfill(6)
     try:
-        desc_evento  = get_evento(evn)
+        evn_info     = get_evento(evn)
+        entidad      = evn_info['entidad']
+        evento       = evn_info['evento']
         pvt          = get_pvt_sort(evn)
         fecha_sorteo = fmt_fecha(pvt['pvt_fchd']) if pvt and pvt.get('pvt_fchd') else ''
         dv_row = _fetchone(
@@ -1241,7 +1248,7 @@ def enviar_notif_meta(evn, sec, celular, nombre):
             url_id = str(evn).zfill(5) + num_cupon + dv1 + dv2 + adic
         else:
             url_id = _gen_url_id(evn, sec)
-        _enviar_whatsapp_meta(celular, nombre, num_cupon, desc_evento, fecha_sorteo, url_id)
+        _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, fecha_sorteo, url_id)
         registrar_msg_proc('META-WA', f'{celular}|', f'bingo_abg {nombre} cupon {num_cupon}',
                            evn=evn, sec=int(sec))
         log.info("META-WA OK evn=%s sec=%s cel=%s", evn, sec, celular)
