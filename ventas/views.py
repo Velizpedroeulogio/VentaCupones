@@ -383,7 +383,12 @@ def adm_preview_plantilla_api(request, evn):
         msg_id = int(body.get('msg_id', 0))
     except Exception:
         return JsonResponse({'ok': False, 'error': 'Datos inválidos'})
-    data = svc.get_preview_plantilla(evn, msg_id)
+    try:
+        data = svc.get_preview_plantilla(evn, msg_id)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("preview_plantilla error: %s", e, exc_info=True)
+        return JsonResponse({'ok': False, 'error': str(e)})
     if data is None:
         return JsonResponse({'ok': False, 'error': 'Registro no encontrado'})
     return JsonResponse({'ok': True, **data})

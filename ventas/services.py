@@ -1347,7 +1347,7 @@ def get_preview_plantilla(evn, msg_id):
     nombre = str(row_nom[0] or '') if row_nom else ''
 
     pvt          = get_pvt_sort(evn)
-    burl         = str(pvt.get('burl') or 'https://visor-gbl-production.up.railway.app').rstrip('/')
+    burl         = str((pvt or {}).get('burl') or 'https://visor-gbl-production.up.railway.app').rstrip('/')
     fecha_sorteo = fmt_fecha(pvt['pvt_fchd']) if pvt and pvt.get('pvt_fchd') else ''
 
     dv_row = _fetchone(
