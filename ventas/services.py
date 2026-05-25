@@ -1412,7 +1412,16 @@ def enviar_notif_venta(evn, sec, persona, pvt):
         celular = str(persona.get('per_celular') or '').strip()
         email   = str(persona.get('per_email')   or '').strip()
         log.info("NOTIF destino: email=%r celular=%r", email, celular)
-        url    = f"{burl.rstrip('/')}/?id={_gen_url_id(evn, sec)}"
+        dv_row = _fetchone(
+            'SELECT "INF_DV1","INF_DV2","INF_ADIC" FROM "INF_URL"'
+            ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+            (evn, int(sec))
+        )
+        if dv_row:
+            url_id = str(evn).zfill(5) + str(sec).zfill(6) + str(dv_row[0] or '') + str(dv_row[1] or '') + str(dv_row[2] or '')
+        else:
+            url_id = _gen_url_id(evn, sec)
+        url    = f"{burl.rstrip('/')}/?id={url_id}"
         texto  = wmsg_tpl.format(nombre=nombre, cupon=cupon, url=url)
         asunto = emsj_tpl.format(nombre=nombre, cupon=cupon, url=url) if emsj_tpl else f"Tu cupón N° {cupon}"
         if wpro == 'M':
