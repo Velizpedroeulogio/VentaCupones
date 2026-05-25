@@ -374,24 +374,25 @@ def adm_reenviar_api(request, evn):
 
 @csrf_exempt
 def adm_preview_plantilla_api(request, evn):
-    if request.method != 'POST':
-        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
-    if request.session.get('adm_evn') != evn:
-        return JsonResponse({'ok': False, 'error': 'Sesión inválida'})
+    import logging
+    _log = logging.getLogger(__name__)
     try:
-        body   = json.loads(request.body)
-        msg_id = int(body.get('msg_id', 0))
-    except Exception:
-        return JsonResponse({'ok': False, 'error': 'Datos inválidos'})
-    try:
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+        if request.session.get('adm_evn') != evn:
+            return JsonResponse({'ok': False, 'error': 'Sesión inválida'})
+        try:
+            body   = json.loads(request.body)
+            msg_id = int(body.get('msg_id', 0))
+        except Exception:
+            return JsonResponse({'ok': False, 'error': 'Datos inválidos'})
         data = svc.get_preview_plantilla(evn, msg_id)
+        if data is None:
+            return JsonResponse({'ok': False, 'error': 'Registro no encontrado'})
+        return JsonResponse({'ok': True, **data})
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("preview_plantilla error: %s", e, exc_info=True)
+        _log.error("adm_preview_plantilla_api error evn=%s: %s", evn, e, exc_info=True)
         return JsonResponse({'ok': False, 'error': str(e)})
-    if data is None:
-        return JsonResponse({'ok': False, 'error': 'Registro no encontrado'})
-    return JsonResponse({'ok': True, **data})
 
 
 def adm_logout_view(request, evn):

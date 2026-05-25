@@ -284,7 +284,15 @@ async function previewPlantilla(msgId) {
             headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
             body: JSON.stringify({msg_id: msgId})
         });
-        const d = await r.json();
+        let d;
+        try {
+            d = await r.json();
+        } catch(_) {
+            const txt = await r.text().catch(() => '');
+            document.getElementById('prev-body').innerHTML =
+                '<div style="color:red;padding:10px;">HTTP ' + r.status + ' — respuesta no JSON:<br><pre style="font-size:10px;white-space:pre-wrap;max-height:120px;overflow:auto;">' + esc(txt.slice(0,500)) + '</pre></div>';
+            return;
+        }
         if (!d.ok) { document.getElementById('prev-body').innerHTML = '<div style="color:red;padding:10px;">'+esc(d.error||'Error')+'</div>'; return; }
         const txt =
             `Hola ${d.nombre}!\n\n` +
@@ -296,7 +304,7 @@ async function previewPlantilla(msgId) {
         document.getElementById('prev-cel').textContent  = d.celular ? '📱 ' + d.celular : '';
         document.getElementById('prev-burbuja').innerHTML = txtHtml;
     } catch(e) {
-        document.getElementById('prev-body').innerHTML = '<div style="color:red;padding:10px;">Error de conexión</div>';
+        document.getElementById('prev-body').innerHTML = '<div style="color:red;padding:10px;">Error de red: ' + esc(String(e)) + '</div>';
     }
 }
 
