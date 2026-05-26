@@ -14,7 +14,7 @@ def _fmt_precio(valor):
 def login_view(request, evn):
     return render(request, "ventas/form1.html", {
         "evn":         evn,
-        "evento_desc": svc.get_evento(evn),
+        "evento_desc": svc.get_evento(evn)['evento'],
         "img_evento":  svc.get_imagen_evento(evn),
         "bloqueo_msg": svc.check_qr_habilitado(evn),
     })
@@ -65,7 +65,7 @@ def principal(request, evn):
 
     return render(request, "ventas/form2.html", {
         "evn":           evn,
-        "evento_desc":   svc.get_evento(evn),
+        "evento_desc":   svc.get_evento(evn)['evento'],
         "nombre":        request.session.get("nombre", ""),
         "img_evento":    svc.get_imagen_evento(evn),
         "img_sponsor":   svc.get_imagen_sponsor(evn),
@@ -311,7 +311,7 @@ def adm_principal_view(request, evn):
 
     return render(request, "ventas/adm_principal.html", {
         "evn":         evn,
-        "evento_desc": svc.get_evento(evn),
+        "evento_desc": svc.get_evento(evn)['evento'],
         "img_evento":  svc.get_imagen_evento(evn),
         "nombre":      request.session.get("adm_nombre", ""),
         "desde":       desde_date.strftime('%Y-%m-%d'),
@@ -457,7 +457,7 @@ def rendicion_view(request, evn):
     }
     return render(request, "ventas/rendicion.html", {
         "evn":          evn,
-        "evento_desc":  svc.get_evento(evn),
+        "evento_desc":  svc.get_evento(evn)['evento'],
         "usuario":      usuario,
         "nombre":       nombre,
         "desde":        desde_str,
@@ -514,7 +514,7 @@ def rendicion_confirmar_api(request, evn):
 def qr_view(request, evn):
     return render(request, 'ventas/qr.html', {
         'evn':         evn,
-        'evento_desc': svc.get_evento(evn),
+        'evento_desc': svc.get_evento(evn)['evento'],
         'img_evento':  svc.get_imagen_evento(evn),
         'msg_qr':      svc.get_evento_msgqr(evn).replace('\\n', '\n'),
         'bloqueo_msg': svc.check_qr_habilitado(evn),
@@ -593,7 +593,7 @@ def qr_flyer_view(request, evn):
     qr_b64 = base64.b64encode(buf.getvalue()).decode()
     return render(request, 'ventas/qr_flyer.html', {
         'evn':         evn,
-        'evento_desc': svc.get_evento(evn),
+        'evento_desc': svc.get_evento(evn)['evento'],
         'img_evento':  svc.get_imagen_evento(evn),
         'msg_qr':      svc.get_evento_msgqr(evn).replace('\\n', '\n'),
         'url_qr':      url_qr,
