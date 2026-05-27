@@ -1189,7 +1189,11 @@ def _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, url_id):
     if not _WA_PHONE_NUMBER_ID or not _WA_ACCESS_TOKEN:
         raise ValueError("WA_PHONE_NUMBER_ID o WA_ACCESS_TOKEN no configurados")
     digits = re.sub(r'\D', '', celular)
-    if not digits.startswith('54'):
+    if digits.startswith('54'):
+        pass
+    elif digits.startswith('0'):
+        digits = '54' + digits[1:]   # 03816401776 → 543816401776
+    else:
         digits = '54' + digits
     payload = {
         "messaging_product": "whatsapp",
