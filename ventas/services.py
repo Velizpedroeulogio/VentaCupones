@@ -81,6 +81,14 @@ def get_evento(evn):
     return {'evento': '', 'entidad': ''}
 
 
+def get_nombres_meta(evn):
+    """Devuelve {'evento': ..., 'entidad': ...} priorizando PVT_MEVN/PVT_MENT."""
+    pvt = get_pvt_sort(evn)
+    if pvt and (pvt.get('mevn') or pvt.get('ment')):
+        return {'evento': pvt['mevn'], 'entidad': pvt['ment']}
+    return get_evento(evn)
+
+
 # ------------------------------------------------------------------ EVENTO DEFAULTS
 def get_evento_msgqr(evn):
     row = _fetchone('SELECT "EVN_MSGQR" FROM "EVN_DEF" WHERE "EVN_NUM" = %s', (evn,))
@@ -212,7 +220,8 @@ def get_pvt_sort(evn):
         'SELECT "PVT_FCHX","PVT_FCHD","PVT_FCHH",'
         '       "PVT_CHN1","PVT_CHN2","PVT_CHN3","PVT_CHN4","PVT_CHN5",'
         '       "PVT_CHN6","PVT_CHN7","PVT_CHN8","PVT_CHN9",'
-        '       "PVT_BURL","PVT_WMSG","PVT_EMSJ","PVT_WPRO"'
+        '       "PVT_BURL","PVT_WMSG","PVT_EMSJ","PVT_WPRO",'
+        '       "PVT_MEVN","PVT_MENT"'
         ' FROM "PVT_SORT"'
         ' WHERE "PVT_EVN" = %s AND "PVT_FCHX" <= %s'
         ' ORDER BY "PVT_FCHX" DESC'
@@ -261,6 +270,8 @@ def get_pvt_sort(evn):
         "wmsg":     str(row[13] or ""),
         "emsj":     str(row[14] or ""),
         "wpro":     str(row[15] or ""),
+        "mevn":     str(row[16] or ""),
+        "ment":     str(row[17] or ""),
     }
 
 
@@ -1175,9 +1186,11 @@ def _enviar_email(to_addr, subject, body):
     log.info("SMTP OK enviado a %s", to_addr)
 
 
-def _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, fecha_sorteo, url_id):
-    # Plantilla: bingo_abg  variables: {{1}}=nombre {{2}}=cupón {{3}}=entidad {{4}}=evento {{5}}=fecha_sorteo
-    # Botón CTA URL dinámica: sufijo url_id  (base configurada en la plantilla Meta)
+def _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, url_id):
+    # Plantilla: bingosabg
+    # Header {{1}}=entidad
+    # Body   {{1}}=nombre  {{2}}=evento  {{3}}=num_cupon
+    # Botón CTA URL dinámica: sufijo url_id
     import re
     import requests as req
     if not _WA_PHONE_NUMBER_ID or not _WA_ACCESS_TOKEN:
@@ -1190,17 +1203,21 @@ def _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, fecha_sor
         "to": digits,
         "type": "template",
         "template": {
-            "name": "bingo_abg",
+            "name": "bingosabg",
             "language": {"code": "es_AR"},
             "components": [
+                {
+                    "type": "header",
+                    "parameters": [
+                        {"type": "text", "text": entidad}
+                    ]
+                },
                 {
                     "type": "body",
                     "parameters": [
                         {"type": "text", "text": nombre},
-                        {"type": "text", "text": num_cupon},
-                        {"type": "text", "text": entidad},
                         {"type": "text", "text": evento},
-                        {"type": "text", "text": fecha_sorteo},
+                        {"type": "text", "text": num_cupon},
                     ]
                 },
                 {
@@ -1231,7 +1248,7 @@ def enviar_notif_meta(evn, sec, celular, nombre):
     log = logging.getLogger(__name__)
     num_cupon = str(sec).zfill(6)
     try:
-        evn_info     = get_evento(evn)
+        evn_info     = get_nombres_meta(evn)
         entidad      = evn_info['entidad']
         evento       = evn_info['evento']
         pvt          = get_pvt_sort(evn)
@@ -1251,13 +1268,12 @@ def enviar_notif_meta(evn, sec, celular, nombre):
         pvt_burl = str(pvt.get('burl') or 'https://visor-gbl-production.up.railway.app').rstrip('/')
         url_full = f"{pvt_burl}/?id={url_id}"
         txto_msg = (
-            f"Hola {nombre}!\n\n"
-            f"Tu cupón N° {num_cupon} de {entidad} está confirmado para el evento:\n"
-            f"{evento}\n"
-            + (f"\nFecha: {fecha_sorteo}\n" if fecha_sorteo else '') +
-            f"\nPodés verlo en:\n{url_full}"
+            f"{entidad} - Cupón para Sorteo\n\n"
+            f"¡Felicidades {nombre}! Ya estás participando en el sorteo {evento}. "
+            f"Tu cupón es el \"{num_cupon}\". ¡Mucha suerte!\n\n"
+            f"Ver mi cupón: {url_full}"
         )
-        _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, fecha_sorteo, url_id)
+        _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, url_id)
         registrar_msg_proc('META-WA', f'{celular}|', txto_msg, evn=evn, sec=int(sec))
         log.info("META-WA OK evn=%s sec=%s cel=%s", evn, sec, celular)
     except Exception as e:
@@ -1334,7 +1350,7 @@ def get_preview_plantilla(evn, msg_id):
     partes = refe.split('|')
     cel    = partes[0].strip() if partes else ''
 
-    evn_info     = get_evento(evn)
+    evn_info     = get_nombres_meta(evn)
     entidad      = evn_info['entidad']
     evento       = evn_info['evento']
     num_cupon    = str(sec).zfill(6)
