@@ -82,10 +82,6 @@ def get_evento(evn):
 
 
 def get_nombres_meta(evn):
-    """Devuelve {'evento': ..., 'entidad': ...} priorizando PVT_MEVN/PVT_MENT."""
-    pvt = get_pvt_sort(evn)
-    if pvt and (pvt.get('mevn') or pvt.get('ment')):
-        return {'evento': pvt['mevn'], 'entidad': pvt['ment']}
     return get_evento(evn)
 
 
@@ -220,8 +216,7 @@ def get_pvt_sort(evn):
         'SELECT "PVT_FCHX","PVT_FCHD","PVT_FCHH",'
         '       "PVT_CHN1","PVT_CHN2","PVT_CHN3","PVT_CHN4","PVT_CHN5",'
         '       "PVT_CHN6","PVT_CHN7","PVT_CHN8","PVT_CHN9",'
-        '       "PVT_BURL","PVT_WMSG","PVT_EMSJ","PVT_WPRO",'
-        '       "PVT_MEVN","PVT_MENT"'
+        '       "PVT_BURL","PVT_WMSG","PVT_EMSJ","PVT_WPRO"'
         ' FROM "PVT_SORT"'
         ' WHERE "PVT_EVN" = %s AND "PVT_FCHX" <= %s'
         ' ORDER BY "PVT_FCHX" DESC'
@@ -270,8 +265,6 @@ def get_pvt_sort(evn):
         "wmsg":     str(row[13] or ""),
         "emsj":     str(row[14] or ""),
         "wpro":     str(row[15] or ""),
-        "mevn":     str(row[16] or ""),
-        "ment":     str(row[17] or ""),
     }
 
 
