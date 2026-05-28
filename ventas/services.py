@@ -1188,6 +1188,7 @@ def _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, url_id):
     import requests as req
     if not _WA_PHONE_NUMBER_ID or not _WA_ACCESS_TOKEN:
         raise ValueError("WA_PHONE_NUMBER_ID o WA_ACCESS_TOKEN no configurados")
+    import logging as _log
     digits = re.sub(r'\D', '', celular)
     if digits.startswith('549'):
         pass                               # 5493816401776 → ok
@@ -1197,6 +1198,7 @@ def _enviar_whatsapp_meta(celular, nombre, num_cupon, entidad, evento, url_id):
         digits = '549' + digits[1:]        # 03816401776   → 5493816401776
     else:
         digits = '549' + digits            # 3816401776    → 5493816401776
+    _log.getLogger(__name__).warning("META-WA to=%s (raw=%s)", digits, celular)
     payload = {
         "messaging_product": "whatsapp",
         "to": digits,
