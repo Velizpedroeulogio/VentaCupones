@@ -1277,6 +1277,7 @@ def enviar_notif_meta(evn, sec, celular, nombre):
         log.error("META-WA error evn=%s sec=%s: %s", evn, sec, e)
         registrar_msg_proc('META-WA', f'{celular}|', f'bingo_abg {nombre} cupon {num_cupon}',
                            evn=evn, sec=int(sec), erro=str(e)[:500])
+        raise
 
 
 def get_msg_idpr_opciones(evn):
