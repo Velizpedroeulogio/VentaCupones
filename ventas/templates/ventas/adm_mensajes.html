@@ -73,7 +73,7 @@
                     {% if m.mrka == 'E' %}background:#f1f8f1;{% elif m.mrka == 'X' %}background:#fff8f8;{% endif %}">
             <span>{{ m.fecha }}</span>
             <span style="color:#888;">{{ m.hora }}</span>
-            <span>{{ m.sec|zfill:6 }}</span>
+            <span>{{ m.sec }}</span>
             <span style="font-size:11px;color:#c62828;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
                   title="{{ m.erro }}">{{ m.erro|truncatechars:60 }}</span>
             <!-- Destino: email línea 1 / WhatsApp línea 2 -->

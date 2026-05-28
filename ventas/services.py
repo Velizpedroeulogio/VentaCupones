@@ -1323,7 +1323,7 @@ def get_msg_proc(evn, fecha=None, idpr=None, mrka=None):
             'fecha': fcha.strftime('%d.%m.%y') if fcha else '',
             'hora':  str(r[2])[:5] if r[2] else '',
             'idpr':  str(r[3] or ''),
-            'sec':   str(r[4] or ''),
+            'sec':   str(r[4]).zfill(6) if r[4] else '',
             'cel':   cel,
             'mail':  mail,
             'txto':  str(r[6] or ''),
