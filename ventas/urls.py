@@ -4,6 +4,7 @@ from . import views
 app_name = "ventas"
 
 urlpatterns = [
+    path("pvt/", views.pvt_sort_view, name="pvt_sort"),
     path("<int:evn>/",                    views.login_view,    name="login"),
     path("<int:evn>/login/",              views.login_api,     name="login_api"),
     path("<int:evn>/principal/",          views.principal,     name="principal"),

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Mantenimiento PVT_SORT{% endblock %}
+
+{% block content %}
+<style>
+  .adm-card { background:#F8F2F2; border:1px solid #D7B5B5; border-radius:8px; margin-bottom:12px; }
+  .adm-card-hdr { background:#6A1B1B; color:#fff; font-weight:700; padding:6px 12px; border-radius:7px 7px 0 0; font-size:13px; }
+  .adm-card-body { padding:10px 12px; }
+  table th { background:#F3E9E6; color:#6A1B1B; font-size:12px; font-weight:700; }
+  table td { font-size:13px; vertical-align:middle; }
+  .fila-null td { background:#fafafa; color:#aaa; }
+  input.form-control, select.form-select { font-size:13px; border-color:#D7B5B5; }
+  .byl-titulo { color:#6A1B1B; font-weight:700; font-size:18px; margin:12px 0 10px; }
+</style>
+
+<div class="byl-pad">
+  <div class="byl-titulo">&#9881; Mantenimiento PVT_SORT</div>
+
+  <!-- BUSQUEDA -->
+  <div class="adm-card">
+    <div class="adm-card-hdr">Evento</div>
+    <div class="adm-card-body">
+      <form method="get" action="/pvt/" class="d-flex gap-2 align-items-end flex-wrap">
+        <div>
+          <label class="form-label mb-1" style="font-size:12px;font-weight:700">N° Evento</label>
+          <input type="number" name="evn" class="form-control" value="{{ evn|default:'' }}"
+                 required style="width:130px">
+        </div>
+        <div><button class="byl-btn" type="submit">Buscar / Nuevo</button></div>
+        {% if evn %}
+          {% if es_nuevo %}
+            <span class="badge bg-warning text-dark align-self-end">Nuevo registro</span>
+          {% else %}
+            <span class="badge bg-success align-self-end">Registro existente</span>
+          {% endif %}
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  {% if evn %}
+    {% if msg == 'ok' %}
+      <div class="alert alert-success py-2">&#10003; Guardado correctamente en Railway.</div>
+    {% elif msg == 'err' %}
+      <div class="alert alert-danger py-2">&#10007; Error al guardar. Revise los datos.</div>
+    {% endif %}
+
+    <form method="post" action="/pvt/">
+      {% csrf_token %}
+      <input type="hidden" name="evn" value="{{ evn }}">
+
+      <!-- FECHAS -->
+      <div class="adm-card">
+        <div class="adm-card-hdr">Fechas (AAAAMMDD)</div>
+        <div class="adm-card-body">
+          <div class="row g-2">
+            <div class="col-4">
+              <label class="form-label mb-1" style="font-size:12px;font-weight:700">Fecha Definicion</label>
+              <input type="number" name="PVT_FCHX" class="form-control"
+                     value="{{ pvt_datos.PVT_FCHX|default:'' }}">
+            </div>
+            <div class="col-4">
+              <label class="form-label mb-1" style="font-size:12px;font-weight:700">Fecha Vigencia Desde</label>
+              <input type="number" name="PVT_FCHD" class="form-control"
+                     value="{{ pvt_datos.PVT_FCHD|default:'' }}">
+            </div>
+            <div class="col-4">
+              <label class="form-label mb-1" style="font-size:12px;font-weight:700">Fecha Vigencia Hasta</label>
+              <input type="number" name="PVT_FCHH" class="form-control"
+                     value="{{ pvt_datos.PVT_FCHH|default:'' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRILLA RANGOS + PRECIO -->
+      <div class="adm-card">
+        <div class="adm-card-hdr">Rangos por cantidad de cartones</div>
+        <div class="adm-card-body p-0">
+          <table class="table table-bordered table-sm mb-0">
+            <thead>
+              <tr>
+                <th class="text-center" style="width:110px">Cartones</th>
+                <th>Secuencia Desde</th>
+                <th>Secuencia Hasta</th>
+                <th>Precio Venta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fila in grilla %}
+              <tr {% if not fila.tiene %}class="fila-null"{% endif %}>
+                <td class="text-center fw-bold">{{ fila.label }}</td>
+                <td>
+                  <input type="number" name="PVT_SCD{{ fila.idx }}" class="form-control form-control-sm"
+                         value="{{ fila.scd|default:'' }}" placeholder="NULL">
+                </td>
+                <td>
+                  <input type="number" name="PVT_SCH{{ fila.idx }}" class="form-control form-control-sm"
+                         value="{{ fila.sch|default:'' }}" placeholder="NULL">
+                </td>
+                <td>
+                  <input type="number" step="0.01" name="PVT_CHN{{ fila.idx }}" class="form-control form-control-sm"
+                         value="{{ fila.chn|default:'' }}" placeholder="NULL">
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CONFIG ENVIO -->
+      <div class="adm-card">
+        <div class="adm-card-hdr">Configuración de envío</div>
+        <div class="adm-card-body">
+          <div class="mb-2">
+            <label class="form-label mb-1" style="font-size:12px;font-weight:700">URL Base Visor (PVT_BURL)</label>
+            <input type="text" name="PVT_BURL" class="form-control"
+                   value="{{ pvt_datos.PVT_BURL|default:'' }}">
+          </div>
+          <div>
+            <label class="form-label mb-1" style="font-size:12px;font-weight:700">Proveedor de envío (PVT_WPRO)</label>
+            <select name="PVT_WPRO" class="form-select" style="width:auto">
+              <option value="">-- seleccionar --</option>
+              <option value="W" {% if pvt_datos.PVT_WPRO == 'W' %}selected{% endif %}>W — Meta Cloud API (WhatsApp)</option>
+              <option value="T" {% if pvt_datos.PVT_WPRO == 'T' %}selected{% endif %}>T — Twilio (WhatsApp)</option>
+              <option value="C" {% if pvt_datos.PVT_WPRO == 'C' %}selected{% endif %}>C — CallMeBot (WhatsApp)</option>
+              <option value="M" {% if pvt_datos.PVT_WPRO == 'M' %}selected{% endif %}>M — SMTP (Email)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="byl-btn">&#128190; Guardar</button>
+        <a href="/pvt/?evn={{ evn }}" class="byl-btn">&#8635; Recargar</a>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

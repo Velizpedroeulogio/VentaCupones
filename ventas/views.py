@@ -787,3 +787,102 @@ def confirmar_cupon(request, evn):
                              "error": "Debe buscar nuevamente por una concurrencia operativa"})
     request.session["cupon_sec"] = str(sec)
     return JsonResponse({"ok": True})
+
+
+# ── Mantenimiento PVT_SORT ────────────────────────────────────────────────────
+def pvt_sort_view(request):
+    from django.db import connection
+
+    evn_str = request.GET.get("evn", "").strip() if request.method == "GET" else request.POST.get("evn", "").strip()
+    msg     = request.GET.get("msg", "")
+    evn     = int(evn_str) if evn_str else None
+
+    pvt_datos   = None
+    evnc_rangos = {}
+
+    if evn:
+        # Buscar en PVT_SORT
+        campos = (
+            "PVT_FCHX,PVT_FCHD,PVT_FCHH,"
+            "PVT_SCD1,PVT_SCH1,PVT_SCD2,PVT_SCH2,PVT_SCD3,PVT_SCH3,"
+            "PVT_SCD4,PVT_SCH4,PVT_SCD5,PVT_SCH5,PVT_SCD6,PVT_SCH6,"
+            "PVT_SCD7,PVT_SCH7,PVT_SCD8,PVT_SCH8,PVT_SCD9,PVT_SCH9,"
+            "PVT_CHN1,PVT_CHN2,PVT_CHN3,PVT_CHN4,PVT_CHN5,"
+            "PVT_CHN6,PVT_CHN7,PVT_CHN8,PVT_CHN9,"
+            "PVT_BURL,PVT_WMSG,PVT_EMSJ,PVT_WPRO"
+        )
+        col_list = [c.strip() for c in campos.split(",")]
+        with connection.cursor() as cur:
+            cur.execute(
+                f'SELECT {",".join(chr(34)+c+chr(34) for c in col_list)} FROM "PVT_SORT" WHERE "PVT_EVN" = %s',
+                [evn]
+            )
+            row = cur.fetchone()
+        if row:
+            pvt_datos = dict(zip(col_list, row))
+
+        # Recuperar rangos desde EVNC_CAR
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT "EVNC_GRP", MIN("EVNC_SEC"), MAX("EVNC_SEC")
+                FROM "EVNC_CAR"
+                WHERE "EVNC_NUM" = %s
+                GROUP BY "EVNC_GRP"
+                ORDER BY "EVNC_GRP"
+            """, [evn])
+            evnc_rangos = {grp: (smin, smax) for grp, smin, smax in cur.fetchall()}
+
+    if request.method == "POST" and evn:
+        def ci(k): return int(request.POST[k]) if request.POST.get(k, "").strip() else None
+        def cf(k):
+            s = request.POST.get(k, "").strip()
+            return float(s.replace(",", ".")) if s else None
+        def cs(k): return request.POST[k].strip() or None
+
+        datos = {
+            "PVT_FCHX": ci("PVT_FCHX"), "PVT_FCHD": ci("PVT_FCHD"), "PVT_FCHH": ci("PVT_FCHH"),
+            **{f"PVT_SCD{i}": ci(f"PVT_SCD{i}") for i in range(1,10)},
+            **{f"PVT_SCH{i}": ci(f"PVT_SCH{i}") for i in range(1,10)},
+            **{f"PVT_CHN{i}": cf(f"PVT_CHN{i}") for i in range(1,10)},
+            "PVT_BURL": cs("PVT_BURL"), "PVT_WPRO": cs("PVT_WPRO"),
+            "PVT_WMSG": pvt_datos.get("PVT_WMSG") if pvt_datos else None,
+            "PVT_EMSJ": pvt_datos.get("PVT_EMSJ") if pvt_datos else None,
+        }
+        todos = (["PVT_FCHX","PVT_FCHD","PVT_FCHH"] +
+                 [f"PVT_SCD{i}" for i in range(1,10)] +
+                 [f"PVT_SCH{i}" for i in range(1,10)] +
+                 [f"PVT_CHN{i}" for i in range(1,10)] +
+                 ["PVT_BURL","PVT_WMSG","PVT_EMSJ","PVT_WPRO"])
+        cols_i = '"PVT_EVN",' + ",".join(f'"{c}"' for c in todos)
+        ph     = ",".join(["%s"] * (len(todos)+1))
+        sets   = ",".join(f'"{c}"=EXCLUDED."{c}"' for c in todos)
+        sql    = f'INSERT INTO "PVT_SORT" ({cols_i}) VALUES ({ph}) ON CONFLICT ("PVT_EVN") DO UPDATE SET {sets}'
+        try:
+            with connection.cursor() as cur:
+                cur.execute(sql, [evn] + [datos[c] for c in todos])
+            return redirect(f"/pvt/?evn={evn}&msg=ok")
+        except Exception as e:
+            msg = "err"
+            pvt_datos = datos
+
+    # Armar grilla 1..9 combinando EVNC_CAR + PVT_SORT
+    grilla = []
+    for i in range(1, 10):
+        smin, smax = evnc_rangos.get(i, (None, None))
+        grilla.append({
+            "idx":   i,
+            "label": f"1 cartón" if i == 1 else f"{i} cartones",
+            "scd":   pvt_datos.get(f"PVT_SCD{i}") if pvt_datos else smin,
+            "sch":   pvt_datos.get(f"PVT_SCH{i}") if pvt_datos else smax,
+            "chn":   pvt_datos.get(f"PVT_CHN{i}") if pvt_datos else None,
+            "tiene": smin is not None,
+        })
+
+    return render(request, "ventas/pvt_sort.html", {
+        "evn":        evn,
+        "pvt_datos":  pvt_datos,
+        "grilla":     grilla,
+        "msg":        msg,
+        "es_nuevo":   evn and pvt_datos is None,
+        "tiene_evnc": bool(evnc_rangos),
+    })
