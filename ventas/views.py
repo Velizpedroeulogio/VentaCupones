@@ -862,6 +862,8 @@ def pvt_sort_view(request):
                 cur.execute(sql, [evn] + [datos[c] for c in todos])
             return redirect(f"/pvt/?evn={evn}&msg=ok")
         except Exception as e:
+            import logging
+            logging.getLogger(__name__).exception("pvt_sort UPSERT error evn=%s", evn)
             msg = "err"
             pvt_datos = datos
 
