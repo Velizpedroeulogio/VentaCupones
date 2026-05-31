@@ -92,11 +92,11 @@
                 <td class="text-center fw-bold">{{ fila.label }}</td>
                 <td>
                   <input type="number" name="PVT_SCD{{ fila.idx }}" class="form-control form-control-sm"
-                         value="{{ fila.scd|default:'' }}" placeholder="NULL"{% if not fila.tiene %} readonly{% endif %}>
+                         value="{{ fila.scd|default:'' }}" placeholder="NULL" readonly>
                 </td>
                 <td>
                   <input type="number" name="PVT_SCH{{ fila.idx }}" class="form-control form-control-sm"
-                         value="{{ fila.sch|default:'' }}" placeholder="NULL"{% if not fila.tiene %} readonly{% endif %}>
+                         value="{{ fila.sch|default:'' }}" placeholder="NULL" readonly>
                 </td>
                 <td>
                   <input type="text" inputmode="decimal" name="PVT_CHN{{ fila.idx }}" class="form-control form-control-sm"
