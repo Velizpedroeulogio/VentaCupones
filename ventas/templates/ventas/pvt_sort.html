@@ -83,7 +83,7 @@
                 <th class="text-center" style="width:110px">Cartones</th>
                 <th>Secuencia Desde</th>
                 <th>Secuencia Hasta</th>
-                <th>Precio Venta</th>
+                <th>Precio de Venta</th>
               </tr>
             </thead>
             <tbody>
@@ -92,15 +92,15 @@
                 <td class="text-center fw-bold">{{ fila.label }}</td>
                 <td>
                   <input type="number" name="PVT_SCD{{ fila.idx }}" class="form-control form-control-sm"
-                         value="{{ fila.scd|default:'' }}" placeholder="NULL">
+                         value="{{ fila.scd|default:'' }}" placeholder="NULL"{% if not fila.tiene %} readonly{% endif %}>
                 </td>
                 <td>
                   <input type="number" name="PVT_SCH{{ fila.idx }}" class="form-control form-control-sm"
-                         value="{{ fila.sch|default:'' }}" placeholder="NULL">
+                         value="{{ fila.sch|default:'' }}" placeholder="NULL"{% if not fila.tiene %} readonly{% endif %}>
                 </td>
                 <td>
                   <input type="text" inputmode="decimal" name="PVT_CHN{{ fila.idx }}" class="form-control form-control-sm"
-                         value="{{ fila.chn|default:'' }}" placeholder="NULL">
+                         value="{{ fila.chn|default:'' }}" placeholder="NULL"{% if not fila.tiene %} readonly{% endif %}>
                 </td>
               </tr>
               {% endfor %}
