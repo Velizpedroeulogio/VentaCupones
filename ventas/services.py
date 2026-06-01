@@ -93,22 +93,27 @@ def get_evento_msgqr(evn):
 
 def check_qr_habilitado(evn):
     """Retorna None si OK, o string de error si el servicio no está disponible."""
-    from datetime import date
-    hoy = date.today()
+    hoy = fecha_hoy_aaaammdd()
     row = _fetchone(
-        'SELECT "EVN_ESTADO","EVN_FCHDES","EVN_FCHHAS" FROM "EVN_DEF" WHERE "EVN_NUM"=%s',
+        'SELECT "EVN_ESTADO" FROM "EVN_DEF" WHERE "EVN_NUM"=%s',
         (evn,)
     )
-    if not row:
-        return None
-    estado, fch_des, fch_has = row
-    estado = str(estado or 'H').strip()
-    if estado == 'B':
-        return "Servicio bloqueado"
-    if fch_des and hoy < fch_des:
-        return f"Servicio no disponible hasta el {fch_des.strftime('%d/%m/%Y')}"
-    if fch_has and hoy > fch_has:
-        return f"Servicio vencido el {fch_has.strftime('%d/%m/%Y')}"
+    if row:
+        estado = str(row[0] or 'H').strip()
+        if estado == 'B':
+            return "Servicio bloqueado"
+    pvt_row = _fetchone(
+        'SELECT "PVT_FCHD","PVT_FCHH" FROM "PVT_SORT"'
+        ' WHERE "PVT_EVN" = %s AND "PVT_FCHX" <= %s'
+        ' ORDER BY "PVT_FCHX" DESC LIMIT 1',
+        (evn, hoy)
+    )
+    if pvt_row:
+        fch_des, fch_has = pvt_row
+        if fch_des and hoy < fch_des:
+            return f"Servicio no disponible hasta el {fmt_fecha(fch_des)}"
+        if fch_has and hoy > fch_has:
+            return f"Servicio vencido el {fmt_fecha(fch_has)}"
     return None
 
 
@@ -747,20 +752,29 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
     hoy   = date.today()
     ahora = datetime.now().time()
 
-    # Validar estado y fechas habilitadas del evento
+    # Validar estado del evento
     evn_ctrl = _fetchone(
-        'SELECT "EVN_ESTADO","EVN_FCHDES","EVN_FCHHAS" FROM "EVN_DEF" WHERE "EVN_NUM"=%s',
+        'SELECT "EVN_ESTADO" FROM "EVN_DEF" WHERE "EVN_NUM"=%s',
         (evn,)
     )
     if evn_ctrl:
-        estado, fch_des, fch_has = evn_ctrl
-        estado = str(estado or 'H').strip()
+        estado = str(evn_ctrl[0] or 'H').strip()
         if estado == 'B':
             return None, None, None, "Servicio bloqueado"
-        if fch_des and hoy < fch_des:
-            return None, None, None, f"Servicio no disponible hasta el {fch_des.strftime('%d/%m/%Y')}"
-        if fch_has and hoy > fch_has:
-            return None, None, None, f"Servicio vencido el {fch_has.strftime('%d/%m/%Y')}"
+    # Validar fechas de vigencia desde PVT_SORT
+    hoy_int = fecha_hoy_aaaammdd()
+    pvt_ctrl = _fetchone(
+        'SELECT "PVT_FCHD","PVT_FCHH" FROM "PVT_SORT"'
+        ' WHERE "PVT_EVN" = %s AND "PVT_FCHX" <= %s'
+        ' ORDER BY "PVT_FCHX" DESC LIMIT 1',
+        (evn, hoy_int)
+    )
+    if pvt_ctrl:
+        fch_des, fch_has = pvt_ctrl
+        if fch_des and hoy_int < fch_des:
+            return None, None, None, f"Servicio no disponible hasta el {fmt_fecha(fch_des)}"
+        if fch_has and hoy_int > fch_has:
+            return None, None, None, f"Servicio vencido el {fmt_fecha(fch_has)}"
 
     segundo    = datetime.now().second
     ultimo_dig = int(str(abs(int(nid)))[-1])
