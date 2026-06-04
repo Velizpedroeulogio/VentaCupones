@@ -149,6 +149,7 @@ def proximo_api(request, evn):
     except Exception:
         return JsonResponse({"ok": False, "error": "Cantidad inválida"})
     nums_pref = body.get("nums_pref") or []
+    omitir    = bool(body.get("omitir", False))
 
     request.session["sel_cantidad"]  = cantidad
     request.session["sel_nums_pref"] = nums_pref
@@ -170,7 +171,7 @@ def proximo_api(request, evn):
         return JsonResponse({"ok": False, "error": "Cantidad no configurada"})
 
     rango = pvt["rangos"][cantidad]
-    secuencias = svc.get_secuencias_disponibles(evn, rango["scd"], rango["sch"], nums_pref or None)
+    secuencias = svc.get_secuencias_disponibles(evn, rango["scd"], rango["sch"], nums_pref or None, omitir=omitir)
     if not secuencias:
         return JsonResponse({"ok": False, "error": "No hay cupones disponibles"})
 

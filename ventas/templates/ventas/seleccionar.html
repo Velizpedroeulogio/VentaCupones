@@ -51,6 +51,7 @@
             <input type="number" class="num-pref" min="1" max="90" style="width:54px;text-align:center;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;" placeholder="--">
             <input type="number" class="num-pref" min="1" max="90" style="width:54px;text-align:center;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;" placeholder="--">
             <button class="byl-btn" type="button" id="btn-buscar">Buscar</button>
+            <button class="byl-btn" type="button" id="btn-omitir">Omitir</button>
         </div>
 
         <div id="msg-error" class="byl-error mt-2" style="display:none;"></div>
@@ -133,13 +134,14 @@ function limpiarResultado() {
     currentIdx = 0;
 }
 
-async function fetchSecuencias(numsPref) {
+async function fetchSecuencias(numsPref, omitir) {
     mostrarError('');
     const cantidad = document.getElementById('sel-cantidad').value;
     if (!cantidad) { mostrarError('Seleccioná una cantidad de cartones'); return; }
     try {
         const body = {cantidad: parseInt(cantidad)};
         if (numsPref && numsPref.length) body.nums_pref = numsPref;
+        if (omitir) body.omitir = true;
         const r = await fetch(URL_PROXIMO, {
             method: 'POST',
             headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
@@ -183,6 +185,8 @@ if (TOPE_BLOQUEADO) {
     document.getElementById('btn-proximo').style.opacity = '.4';
     document.getElementById('btn-buscar').disabled = true;
     document.getElementById('btn-buscar').style.opacity = '.4';
+    document.getElementById('btn-omitir').disabled = true;
+    document.getElementById('btn-omitir').style.opacity = '.4';
     document.querySelectorAll('.num-pref').forEach(i => i.disabled = true);
 }
 
@@ -190,16 +194,28 @@ document.querySelectorAll('.num-pref').forEach(inp => inp.addEventListener('inpu
 
 document.getElementById('btn-proximo').addEventListener('click', () => { if (!TOPE_BLOQUEADO) fetchSecuencias(null); });
 
+function validarNums() {
+    const vals = [...document.querySelectorAll('.num-pref')]
+        .map(i => i.value.trim()).filter(v => v !== '');
+    if (vals.length < 2) { mostrarError('Ingrese al menos 2 números'); return null; }
+    const nums = vals.map(Number);
+    if (nums.some(n => n < 1 || n > 90)) { mostrarError('Los números deben estar entre 1 y 90'); return null; }
+    if (new Set(nums).size !== nums.length) { mostrarError('Los números no deben repetirse'); return null; }
+    return nums;
+}
+
 document.getElementById('btn-buscar').addEventListener('click', function() {
     if (TOPE_BLOQUEADO) return;
     mostrarError('');
-    const vals = [...document.querySelectorAll('.num-pref')]
-        .map(i => i.value.trim()).filter(v => v !== '');
-    if (vals.length < 2) { mostrarError('Ingrese al menos 2 números'); return; }
-    const nums = vals.map(Number);
-    if (nums.some(n => n < 1 || n > 90)) { mostrarError('Los números deben estar entre 1 y 90'); return; }
-    if (new Set(nums).size !== nums.length) { mostrarError('Los números no deben repetirse'); return; }
-    fetchSecuencias(nums);
+    const nums = validarNums();
+    if (nums) fetchSecuencias(nums, false);
+});
+
+document.getElementById('btn-omitir').addEventListener('click', function() {
+    if (TOPE_BLOQUEADO) return;
+    mostrarError('');
+    const nums = validarNums();
+    if (nums) fetchSecuencias(nums, true);
 });
 
 document.getElementById('btn-confirmar').addEventListener('click', async function() {

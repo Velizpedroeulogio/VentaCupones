@@ -430,7 +430,7 @@ _EST_DISPONIBLE_A = (
 )
 
 
-def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
+def get_secuencias_disponibles(evn, scd, sch, nums_pref=None, omitir=False):
     params = [evn, scd, sch]
     if nums_pref:
         like_parts = []
@@ -438,17 +438,34 @@ def get_secuencias_disponibles(evn, scd, sch, nums_pref=None):
             enc_odd, enc_even = _codificar_num(num)
             like_parts.append('(B."CAR_LIS" LIKE %s OR B."CAR_LIS" LIKE %s)')
             params += [f'%{enc_odd}:%', f'%{enc_even}:%']
-        sql = (
-            'SELECT DISTINCT A."EVNC_SEC"'
-            '  FROM "EVNC_CAR" A'
-            '  LEFT JOIN "MTZ_CAR" B'
-            '    ON B."MTZ_NUM" = A."MTZ_NUM" AND B."CAR_SER" = A."CAR_SER"'
-            '   AND B."CAR_NUM" = A."CAR_NUM"'
-            ' WHERE A."EVNC_NUM" = %s AND A."EVNC_SEC" BETWEEN %s AND %s'
-            '   AND ' + _EST_DISPONIBLE_A +
-            '   AND ' + ' AND '.join(like_parts) +
-            ' ORDER BY A."EVNC_SEC" LIMIT 5'
-        )
+        if omitir:
+            # Cupones donde NINGÚN cartón contiene NINGUNO de los números indicados
+            or_conds = ' OR '.join(like_parts)
+            sql = (
+                'SELECT A."EVNC_SEC"'
+                '  FROM "EVNC_CAR" A'
+                '  LEFT JOIN "MTZ_CAR" B'
+                '    ON B."MTZ_NUM" = A."MTZ_NUM" AND B."CAR_SER" = A."CAR_SER"'
+                '   AND B."CAR_NUM" = A."CAR_NUM"'
+                ' WHERE A."EVNC_NUM" = %s AND A."EVNC_SEC" BETWEEN %s AND %s'
+                '   AND ' + _EST_DISPONIBLE_A +
+                ' GROUP BY A."EVNC_SEC"'
+                ' HAVING BOOL_OR(' + or_conds + ') IS NOT TRUE'
+                ' ORDER BY A."EVNC_SEC" LIMIT 5'
+            )
+        else:
+            # Cupones donde al menos un cartón contiene TODOS los números indicados
+            sql = (
+                'SELECT DISTINCT A."EVNC_SEC"'
+                '  FROM "EVNC_CAR" A'
+                '  LEFT JOIN "MTZ_CAR" B'
+                '    ON B."MTZ_NUM" = A."MTZ_NUM" AND B."CAR_SER" = A."CAR_SER"'
+                '   AND B."CAR_NUM" = A."CAR_NUM"'
+                ' WHERE A."EVNC_NUM" = %s AND A."EVNC_SEC" BETWEEN %s AND %s'
+                '   AND ' + _EST_DISPONIBLE_A +
+                '   AND ' + ' AND '.join(like_parts) +
+                ' ORDER BY A."EVNC_SEC" LIMIT 5'
+            )
     else:
         sql = (
             'SELECT DISTINCT "EVNC_SEC" FROM "EVNC_CAR"'
