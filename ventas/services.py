@@ -514,6 +514,194 @@ def vender_cupon(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=
             return True
 
 
+def vender_cupon_efectivo_total(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=None, precio=0):
+    """Pago en efectivo por el valor total del cupón. EVNC_EST='V', PRD_ID=1."""
+    from datetime import date, datetime
+    hoy   = date.today()
+    ahora = datetime.now().time()
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            cur.execute(
+                'UPDATE "EVNC_CAR"'
+                ' SET "EVNC_EST"=%s,"EVNC_VEN"=%s,"EVNC_TIME"=NOW(),'
+                '     "EVNC_NID"=%s,"EVNC_NOM"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s,'
+                '     "EVNC_FPGO"=%s'
+                ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
+                ('V', str(usuario or ''), nid, nom, dom, loc, ref, 'E', evn, int(sec))
+            )
+            if cur.rowcount == 0:
+                return False
+            cur.execute(
+                'INSERT INTO "MDP_MOV"'
+                ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
+                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE","MDP_FPGO","MDP_NID")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (hoy, ahora, 1, evn, str(usuario or ''), 1,
+                 precio, 'C', 'I', str(sec).zfill(6), 'E', nid)
+            )
+            return True
+
+
+def vender_cupon_efectivo_parcial(evn, sec, usuario, nid=None, nom=None, dom=None, loc=None, ref=None,
+                                   precio=0, importe=0, fecha_compromiso=0):
+    """Pago en efectivo parcial. EVNC_EST='Q', PRD_ID=4, graba en MDP_PPA."""
+    from datetime import date, datetime
+    hoy   = date.today()
+    ahora = datetime.now().time()
+    hoy_dec = int(hoy.strftime('%Y%m%d'))
+    saldo = round(float(precio) - float(importe), 2)
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            cur.execute(
+                'UPDATE "EVNC_CAR"'
+                ' SET "EVNC_EST"=%s,"EVNC_VEN"=%s,"EVNC_TIME"=NOW(),'
+                '     "EVNC_NID"=%s,"EVNC_NOM"=%s,"EVNC_DOM"=%s,"EVNC_LOC"=%s,"EVNC_REF"=%s,'
+                '     "EVNC_FPGO"=%s'
+                ' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
+                ('Q', str(usuario or ''), nid, nom, dom, loc, ref, 'E', evn, int(sec))
+            )
+            if cur.rowcount == 0:
+                return False
+            cur.execute(
+                'INSERT INTO "MDP_MOV"'
+                ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
+                '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE","MDP_FPGO","MDP_NID")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (hoy, ahora, 4, evn, str(usuario or ''), 1,
+                 precio, 'C', 'I', str(sec).zfill(6), 'E', nid)
+            )
+            cur.execute(
+                'INSERT INTO "MDP_PPA"'
+                ' ("EVN_NUM","EVNC_SEC","VEN_COD","MDP_NID",'
+                '  "PPA_FCHA","PPA_IMPO","PPA_SLDO","PPA_FCMP","PPA_ESTD")'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                (evn, int(sec), str(usuario or ''), str(nid or ''),
+                 hoy_dec, round(float(importe), 2), saldo, int(fecha_compromiso), 'P')
+            )
+            return True
+
+
+def get_ppa_list(evn, usuario, estd=None, nid=None, sec=None, fcha_comp=None):
+    """Retorna registros de MDP_PPA con filtros opcionales."""
+    params = [evn, str(usuario or '')]
+    where  = ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s'
+    if estd:
+        where += ' AND "PPA_ESTD"=%s'
+        params.append(str(estd))
+    if nid:
+        where += ' AND "MDP_NID"=%s'
+        params.append(str(nid))
+    if sec:
+        where += ' AND "EVNC_SEC"=%s'
+        params.append(int(sec))
+    if fcha_comp:
+        where += ' AND "PPA_FCMP"=%s'
+        params.append(int(fcha_comp))
+    rows = _fetchall(
+        'SELECT "PPA_ID","EVNC_SEC","MDP_NID","PPA_FCHA","PPA_IMPO","PPA_FCMP","PPA_SLDO","PPA_ESTD"'
+        ' FROM "MDP_PPA"' + where +
+        ' ORDER BY "PPA_ID"',
+        params
+    )
+    result = []
+    for r in rows:
+        result.append({
+            'ppa_id':   r[0],
+            'sec':      r[1],
+            'nid':      str(r[2] or '').strip(),
+            'fcha_fmt': fmt_fecha(r[3]),
+            'impo':     float(r[4]) if r[4] is not None else 0.0,
+            'fcmp_fmt': fmt_fecha(r[5]),
+            'saldo':    float(r[6]) if r[6] is not None else 0.0,
+            'estd':     str(r[7] or '').strip(),
+        })
+    return result
+
+
+def cancelar_pago_parcial(evn, sec, usuario, importe, fecha_compromiso):
+    """
+    Cancela (total o parcialmente) un pago parcial pendiente.
+    - Recupera MDP_MOV con PRD_ID=4 (*1) y último MDP_PPA Estado='P' (*2).
+    - Si importe >= saldo (*2): cierre total → EVNC_EST='V', MDP_MOV PRD_ID=1, todos PPA pasan a 'C'.
+    - Si importe < saldo (*2): nuevo registro MDP_PPA con saldo reducido, sin tocar EVNC_CAR ni MDP_MOV.
+    Retorna (ok, es_total, error).
+    """
+    from datetime import date, datetime
+    hoy      = date.today()
+    ahora    = datetime.now().time()
+    hoy_dec  = int(hoy.strftime('%Y%m%d'))
+
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            # (*1) Recuperar MDP_MOV PRD_ID=4
+            cur.execute(
+                'SELECT "MDP_FCHA","MDP_HORA","CDM_ID","MDP_VALO","MDP_ACCI","MDP_FPGO","MDP_NID","MDP_CPTE"'
+                ' FROM "MDP_MOV"'
+                ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "MDP_CPTE"=%s AND "PRD_ID"=4',
+                (evn, str(usuario or ''), str(sec).zfill(6))
+            )
+            mov = cur.fetchone()
+            if not mov:
+                return False, False, 'No se encontró el movimiento de pago parcial'
+
+            cdm_id   = mov[2]
+            valo_cup = float(mov[3]) if mov[3] is not None else 0.0
+            acci     = mov[4]
+            fpgo     = mov[5]
+            nid      = mov[6]
+
+            # (*2) Recuperar último MDP_PPA Estado='P'
+            cur.execute(
+                'SELECT "PPA_ID","PPA_SLDO"'
+                ' FROM "MDP_PPA"'
+                ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "EVNC_SEC"=%s AND "PPA_ESTD"=\'P\''
+                ' ORDER BY "PPA_ID" DESC LIMIT 1',
+                (evn, str(usuario or ''), int(sec))
+            )
+            ppa = cur.fetchone()
+            if not ppa:
+                return False, False, 'No se encontró pago parcial pendiente'
+
+            saldo_anterior = float(ppa[1]) if ppa[1] is not None else 0.0
+            importe_f      = round(float(importe), 2)
+            es_total       = importe_f >= saldo_anterior
+
+            if es_total:
+                # Cierre total: EVNC_EST='V'
+                cur.execute(
+                    'UPDATE "EVNC_CAR" SET "EVNC_EST"=\'V\' WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
+                    (evn, int(sec))
+                )
+                # Grabar MDP_MOV con PRD_ID=1 y fecha/hora actual
+                cur.execute(
+                    'INSERT INTO "MDP_MOV"'
+                    ' ("MDP_FCHA","MDP_HORA","PRD_ID","EVN_NUM","VEN_COD","CDM_ID",'
+                    '  "MDP_VALO","MDP_ACCI","MDP_ESTD","MDP_CPTE","MDP_FPGO","MDP_NID")'
+                    ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                    (hoy, ahora, 1, evn, str(usuario or ''), cdm_id,
+                     valo_cup, acci, 'I', str(sec).zfill(6), fpgo, nid)
+                )
+                # Todos los PPA pasan a 'C'
+                cur.execute(
+                    'UPDATE "MDP_PPA" SET "PPA_ESTD"=\'C\''
+                    ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s AND "EVNC_SEC"=%s AND "PPA_ESTD"=\'P\'',
+                    (evn, str(usuario or ''), int(sec))
+                )
+            else:
+                # Pago parcial adicional: nuevo registro PPA con saldo reducido
+                nuevo_saldo = round(saldo_anterior - importe_f, 2)
+                cur.execute(
+                    'INSERT INTO "MDP_PPA"'
+                    ' ("EVN_NUM","EVNC_SEC","VEN_COD","MDP_NID",'
+                    '  "PPA_FCHA","PPA_IMPO","PPA_SLDO","PPA_FCMP","PPA_ESTD")'
+                    ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                    (evn, int(sec), str(usuario or ''), str(nid or ''),
+                     hoy_dec, importe_f, nuevo_saldo, int(fecha_compromiso), 'P')
+                )
+
+            return True, es_total, ''
+
+
 # ------------------------------------------------------------------ ADMIN
 def validate_admin_user(evn, usuario, pwd):
     row = _fetchone(
@@ -1001,6 +1189,17 @@ def get_persona(numero_identidad):
     if not row:
         return None
     return {k: (str(v) if v is not None else '') for k, v in zip(_PERSONA_KEYS, row)}
+
+
+def get_persona_by_sec(evn, sec):
+    """Retorna la persona asociada a un cupón dado su secuencia en EVNC_CAR."""
+    row = _fetchone(
+        'SELECT "EVNC_NID" FROM "EVNC_CAR" WHERE "EVNC_NUM"=%s AND "EVNC_SEC"=%s',
+        (evn, int(sec))
+    )
+    if not row or not row[0]:
+        return None
+    return get_persona(row[0])
 
 
 def save_persona(data):

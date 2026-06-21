@@ -727,6 +727,17 @@ def confirmar_venta_api(request, evn):
         precio = pvt["precios"].get(sel_cantidad, 0) if pvt else 0
 
         usuario = request.session.get("usuario", "")
+
+        # Si la forma de pago es Efectivo, no hacer impactos aún —
+        # el frontend debe mostrar el formulario de pago en efectivo.
+        if fpgo == 'E':
+            request.session['pend_nom']  = v('per_nombre')
+            request.session['pend_dom']  = dom
+            request.session['pend_loc']  = loc
+            request.session['pend_ref']  = ref
+            request.session['pend_precio'] = float(precio)
+            return JsonResponse({"ok": True, "pedir_efectivo": True, "precio": float(precio)})
+
         ok = svc.vender_cupon(
             evn, int(cupon_sec), usuario,
             nid=int(persona_dni), nom=v('per_nombre'),
@@ -744,6 +755,148 @@ def confirmar_venta_api(request, evn):
     svc.enviar_notif_venta(evn, int(cupon_sec), persona, pvt or {})
 
     return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+def confirmar_efectivo_api(request, evn):
+    """Recibe importe y fecha_compromiso; ejecuta el impacto de pago en efectivo (total o parcial)."""
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+
+    cupon_sec   = request.session.get("cupon_sec")
+    persona_dni = request.session.get("persona_dni")
+    if not cupon_sec or not persona_dni:
+        return JsonResponse({"ok": False, "error": "Sesión de venta incompleta"})
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except Exception:
+        body = {}
+
+    try:
+        importe          = round(float(body.get('importe', 0) or 0), 2)
+        fecha_compromiso = int(body.get('fecha_compromiso', 0) or 0)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Datos inválidos"})
+
+    precio  = float(request.session.get('pend_precio') or 0)
+    usuario = request.session.get("usuario", "")
+    nom     = request.session.get('pend_nom', '')
+    dom     = request.session.get('pend_dom', '')
+    loc     = request.session.get('pend_loc', '')
+    ref     = request.session.get('pend_ref', '')
+    nid     = int(persona_dni)
+    sec     = int(cupon_sec)
+
+    if importe <= 0 or importe > precio:
+        return JsonResponse({"ok": False, "error": "Importe inválido"})
+
+    es_parcial = importe < precio
+    if es_parcial and not fecha_compromiso:
+        return JsonResponse({"ok": False, "error": "Ingrese la fecha de próximo compromiso"})
+
+    try:
+        pvt = svc.get_pvt_sort(evn)
+        persona = svc.get_persona(persona_dni)
+
+        if es_parcial:
+            ok = svc.vender_cupon_efectivo_parcial(
+                evn, sec, usuario,
+                nid=nid, nom=nom, dom=dom, loc=loc, ref=ref,
+                precio=precio, importe=importe, fecha_compromiso=fecha_compromiso
+            )
+        else:
+            ok = svc.vender_cupon_efectivo_total(
+                evn, sec, usuario,
+                nid=nid, nom=nom, dom=dom, loc=loc, ref=ref, precio=precio
+            )
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": f"Error interno: {e}"})
+
+    if not ok:
+        return JsonResponse({"ok": False, "error": "No se pudo confirmar la venta. El cupón ya no está disponible."})
+
+    for key in ("cupon_sec", "persona_dni", "sel_cantidad", "sel_nums_pref",
+                "pend_nom", "pend_dom", "pend_loc", "pend_ref", "pend_precio"):
+        request.session.pop(key, None)
+
+    if not es_parcial:
+        svc.enviar_notif_venta(evn, sec, persona or {}, pvt or {})
+
+    return JsonResponse({"ok": True, "es_parcial": es_parcial})
+
+
+def pago_parcial_view(request, evn):
+    if request.session.get("evn") != evn:
+        return redirect("ventas:login", evn=evn)
+    usuario = request.session.get("usuario", "")
+    estd    = request.GET.get('estd', '')
+    nid     = request.GET.get('nid', '')
+    sec     = request.GET.get('sec', '')
+    fcomp   = request.GET.get('fcomp', '')
+    registros = svc.get_ppa_list(
+        evn, usuario,
+        estd=estd or None,
+        nid=nid or None,
+        sec=int(sec) if sec else None,
+        fcha_comp=int(fcomp.replace('-', '')) if fcomp else None,
+    )
+    habilitar_cancelar = bool(sec and estd == 'P')
+    import json as _json
+    return render(request, "ventas/pago_parcial.html", {
+        "evn":               evn,
+        "img_evento":        svc.get_imagen_evento(evn),
+        "registros":         registros,
+        "registros_json":    _json.dumps(registros),
+        "fil_estd":          estd,
+        "fil_nid":           nid,
+        "fil_sec":           sec,
+        "fil_fcomp":         fcomp,
+        "habilitar_cancelar": habilitar_cancelar,
+        "estd_opts":         [('', 'Todos'), ('P', 'Pendiente'), ('C', 'Cancelado')],
+    })
+
+
+@csrf_exempt
+def cancelar_pago_parcial_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except Exception:
+        body = {}
+
+    try:
+        sec              = int(body.get('sec', 0))
+        importe          = round(float(body.get('importe', 0) or 0), 2)
+        fecha_compromiso = int(body.get('fecha_compromiso', 0) or 0)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Datos inválidos"})
+
+    if not sec or importe <= 0:
+        return JsonResponse({"ok": False, "error": "Datos incompletos"})
+
+    usuario = request.session.get("usuario", "")
+    try:
+        ok, es_total, error = svc.cancelar_pago_parcial(evn, sec, usuario, importe, fecha_compromiso)
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": f"Error interno: {e}"})
+
+    if not ok:
+        return JsonResponse({"ok": False, "error": error})
+
+    if es_total:
+        persona = svc.get_persona_by_sec(evn, sec)
+        pvt     = svc.get_pvt_sort(evn)
+        if persona:
+            svc.enviar_notif_venta(evn, sec, persona, pvt or {})
+
+    return JsonResponse({"ok": True, "es_total": es_total})
 
 
 def datos_lookup_api(request, evn):

@@ -15,9 +15,10 @@
     <div class="d-flex justify-content-between align-items-center mt-1 mb-2">
         <span style="font-size:13px;color:#555;">Hola, <strong>{{ nombre }}</strong></span>
         <div class="d-flex gap-2">
-            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 1 %}" style="font-size:12px;padding:4px 10px;">CtaVentas</a>
-            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 2 %}" style="font-size:12px;padding:4px 10px;">CtaRend.</a>
-            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 3 %}" style="font-size:12px;padding:4px 10px;">CtaComis</a>
+            <a class="byl-btn" href="{% url 'ventas:pago_parcial' evn %}" style="font-size:12px;padding:4px 10px;">PagoPar</a>
+            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 1 %}" style="font-size:12px;padding:4px 10px;">Ventas</a>
+            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 2 %}" style="font-size:12px;padding:4px 10px;">Rend.</a>
+            <a class="byl-btn" href="{% url 'ventas:movimientos' evn 3 %}" style="font-size:12px;padding:4px 10px;">Comis.</a>
             <a class="byl-btn" href="{% url 'ventas:logout' evn %}" style="font-size:12px;padding:4px 10px;">Salir</a>
         </div>
     </div>
@@ -90,6 +91,29 @@
                 <button class="byl-btn" type="button" id="btn-cancelar-pago">Cancelar</button>
             </div>
         </div>
+
+        <!-- Formulario pago en efectivo -->
+        <div id="sec-efectivo" class="mt-3" style="display:none;border-top:1px solid var(--byl-border);padding-top:12px;">
+            <div class="byl-section-title mb-2">Pago en Efectivo</div>
+            <div class="mb-2">
+                <label style="font-size:13px;font-weight:600;">Valor del Cupón: $<span id="lbl-precio-cupon"></span></label>
+            </div>
+            <div class="mb-2">
+                <label style="font-size:13px;">Importe a pagar ($)</label>
+                <input type="number" id="inp-importe" min="0.01" step="0.01"
+                    style="width:100%;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;margin-top:4px;">
+            </div>
+            <div class="mb-2" id="sec-fecha-comp" style="display:none;">
+                <label style="font-size:13px;">Fecha próximo compromiso</label>
+                <input type="date" id="inp-fecha-comp"
+                    style="width:100%;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;margin-top:4px;">
+            </div>
+            <div id="msg-efectivo" class="mb-2" style="display:none;font-size:13px;"></div>
+            <div class="d-flex gap-2 mt-2">
+                <button class="byl-btn" type="button" id="btn-confirmar-efectivo">Confirmar</button>
+                <button class="byl-btn" type="button" id="btn-cancelar-efectivo">Cancelar</button>
+            </div>
+        </div>
     </div>
 
     <!-- Publicaciones -->
@@ -125,20 +149,44 @@
 
 <script>
 const CSRF = "{{ csrf_token }}";
-const URL_CONFIRMAR_VENTA = "{% url 'ventas:confirmar_venta' evn %}";
-const URL_PRINCIPAL = "{% url 'ventas:principal' evn %}";
+const URL_CONFIRMAR_VENTA    = "{% url 'ventas:confirmar_venta' evn %}";
+const URL_CONFIRMAR_EFECTIVO = "{% url 'ventas:confirmar_efectivo' evn %}";
+const URL_PRINCIPAL          = "{% url 'ventas:principal' evn %}";
 
-const btnConfirmar = document.getElementById('btn-confirmar-venta');
-const btnPago      = document.getElementById('btn-confirmar-pago');
-const btnCancelar  = document.getElementById('btn-cancelar-pago');
-const secPago      = document.getElementById('sec-pago');
-const selFpgo      = document.getElementById('sel-fpgo');
-const msg          = document.getElementById('msg-confirmar');
+const btnConfirmar    = document.getElementById('btn-confirmar-venta');
+const btnPago         = document.getElementById('btn-confirmar-pago');
+const btnCancelar     = document.getElementById('btn-cancelar-pago');
+const secPago         = document.getElementById('sec-pago');
+const selFpgo         = document.getElementById('sel-fpgo');
+const msg             = document.getElementById('msg-confirmar');
+const secEfectivo     = document.getElementById('sec-efectivo');
+const inpImporte      = document.getElementById('inp-importe');
+const inpFechaComp    = document.getElementById('inp-fecha-comp');
+const secFechaComp    = document.getElementById('sec-fecha-comp');
+const msgEfectivo     = document.getElementById('msg-efectivo');
+const lblPrecioCupon  = document.getElementById('lbl-precio-cupon');
+const btnConfEfectivo = document.getElementById('btn-confirmar-efectivo');
+const btnCancEfectivo = document.getElementById('btn-cancelar-efectivo');
+
+let precioCupon = 0;
 
 function mostrarMsg(texto, color) {
     msg.style.color = color;
     msg.textContent = texto;
     msg.style.display = '';
+}
+
+function mostrarMsgEfectivo(texto, color) {
+    msgEfectivo.style.color = color;
+    msgEfectivo.textContent = texto;
+    msgEfectivo.style.display = '';
+}
+
+function volverAlInicio() {
+    secPago.style.display      = 'none';
+    secEfectivo.style.display  = 'none';
+    msg.style.display          = 'none';
+    btnConfirmar.disabled      = false;
 }
 
 btnConfirmar.addEventListener('click', function() {
@@ -149,9 +197,7 @@ btnConfirmar.addEventListener('click', function() {
 });
 
 btnCancelar.addEventListener('click', function() {
-    secPago.style.display = 'none';
-    msg.style.display = 'none';
-    btnConfirmar.disabled = false;
+    volverAlInicio();
 });
 
 btnPago.addEventListener('click', async function() {
@@ -166,7 +212,20 @@ btnPago.addEventListener('click', async function() {
             body: JSON.stringify({fpgo})
         });
         const d = await r.json();
-        if (d.ok) {
+        if (d.ok && d.pedir_efectivo) {
+            // Mostrar formulario de pago en efectivo
+            precioCupon = d.precio;
+            lblPrecioCupon.textContent = precioCupon.toFixed(2).replace('.', ',');
+            inpImporte.value   = precioCupon.toFixed(2);
+            inpImporte.max     = precioCupon;
+            inpFechaComp.value = '';
+            secFechaComp.style.display  = 'none';
+            msgEfectivo.style.display   = 'none';
+            secPago.style.display       = 'none';
+            secEfectivo.style.display   = '';
+            btnConfEfectivo.disabled    = false;
+            btnCancEfectivo.disabled    = false;
+        } else if (d.ok) {
             secPago.style.display = 'none';
             mostrarMsg('✓ Venta confirmada exitosamente.', 'green');
             setTimeout(() => window.location.href = URL_PRINCIPAL, 1500);
@@ -179,6 +238,59 @@ btnPago.addEventListener('click', async function() {
         mostrarMsg('Error de conexión.', 'red');
         btnPago.disabled = false;
         btnCancelar.disabled = false;
+    }
+});
+
+// Mostrar/ocultar fecha compromiso según si el pago es parcial
+inpImporte.addEventListener('input', function() {
+    const val = parseFloat(this.value) || 0;
+    secFechaComp.style.display = (val > 0 && val < precioCupon) ? '' : 'none';
+});
+
+btnCancEfectivo.addEventListener('click', function() {
+    volverAlInicio();
+});
+
+btnConfEfectivo.addEventListener('click', async function() {
+    const importe = parseFloat(inpImporte.value) || 0;
+    if (importe <= 0 || importe > precioCupon) {
+        mostrarMsgEfectivo('Importe inválido.', 'red'); return;
+    }
+    const esParcial = importe < precioCupon;
+    let fechaComp = 0;
+    if (esParcial) {
+        const fStr = inpFechaComp.value;
+        if (!fStr) { mostrarMsgEfectivo('Ingrese la fecha de próximo compromiso.', 'red'); return; }
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const fDate = new Date(fStr + 'T00:00:00');
+        if (fDate <= hoy) { mostrarMsgEfectivo('La fecha de compromiso debe ser mayor a hoy.', 'red'); return; }
+        fechaComp = parseInt(fStr.replace(/-/g, ''));
+    }
+    btnConfEfectivo.disabled = true;
+    btnCancEfectivo.disabled = true;
+    try {
+        const r = await fetch(URL_CONFIRMAR_EFECTIVO, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({importe, fecha_compromiso: fechaComp})
+        });
+        const d = await r.json();
+        if (d.ok) {
+            secEfectivo.style.display = 'none';
+            const txt = d.es_parcial
+                ? '✓ Pago parcial registrado.'
+                : '✓ Venta confirmada exitosamente.';
+            mostrarMsg(txt, 'green');
+            setTimeout(() => window.location.href = URL_PRINCIPAL, 1500);
+        } else {
+            mostrarMsgEfectivo(d.error || 'Error al confirmar.', 'red');
+            btnConfEfectivo.disabled = false;
+            btnCancEfectivo.disabled = false;
+        }
+    } catch(e) {
+        mostrarMsgEfectivo('Error de conexión.', 'red');
+        btnConfEfectivo.disabled = false;
+        btnCancEfectivo.disabled = false;
     }
 });
 </script>

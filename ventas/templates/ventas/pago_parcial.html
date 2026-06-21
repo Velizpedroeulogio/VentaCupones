@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Pagos Parciales{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <div class="byl-title mt-2 mb-2">Pagos Parciales</div>
+
+    <!-- Filtros -->
+    <form method="get" action="" class="mb-3">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:#555;">
+            <span>Estado:</span>
+            <select name="estd" style="border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:12px;">
+                {% for val, lbl in estd_opts %}
+                <option value="{{ val }}" {% if fil_estd == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+            <span>DocIdent:</span>
+            <input type="text" name="nid" value="{{ fil_nid }}"
+                   style="width:90px;border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:12px;">
+            <span>Secuencia:</span>
+            <input type="number" name="sec" value="{{ fil_sec }}"
+                   style="width:75px;border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:12px;">
+            <span>F.Comp.:</span>
+            <input type="date" name="fcomp" value="{{ fil_fcomp }}"
+                   style="border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:12px;">
+            <button type="submit" class="byl-btn" style="font-size:12px;padding:3px 8px;">Buscar</button>
+        </div>
+    </form>
+
+    <!-- Tabla de registros -->
+    {% if registros %}
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+                <tr style="background:var(--byl-accent);color:#fff;">
+                    <th style="padding:4px 6px;text-align:right;">Secuencia</th>
+                    <th style="padding:4px 6px;text-align:left;">DocIdent</th>
+                    <th style="padding:4px 6px;text-align:center;">FechaPago</th>
+                    <th style="padding:4px 6px;text-align:right;">Importe</th>
+                    <th style="padding:4px 6px;text-align:right;">Saldo</th>
+                    <th style="padding:4px 6px;text-align:center;">Compromiso</th>
+                    <th style="padding:4px 6px;text-align:center;">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in registros %}
+                <tr style="border-bottom:1px solid var(--byl-border);">
+                    <td style="padding:4px 6px;text-align:right;">{{ r.sec|stringformat:"06d" }}</td>
+                    <td style="padding:4px 6px;">{{ r.nid }}</td>
+                    <td style="padding:4px 6px;text-align:center;">{{ r.fcha_fmt }}</td>
+                    <td style="padding:4px 6px;text-align:right;">{{ r.impo|floatformat:2 }}</td>
+                    <td style="padding:4px 6px;text-align:right;">{{ r.saldo|floatformat:2 }}</td>
+                    <td style="padding:4px 6px;text-align:center;">{{ r.fcmp_fmt }}</td>
+                    <td style="padding:4px 6px;text-align:center;">
+                        {% if r.estd == 'P' %}<span style="color:orange;font-weight:600;">Pendiente</span>
+                        {% else %}<span style="color:green;">Cancelado</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="byl-error">No hay registros con los filtros aplicados.</div>
+    {% endif %}
+
+    <!-- Botón cancelar pago parcial (solo si filtro por Secuencia y Estado=P) -->
+    {% if habilitar_cancelar %}
+    <div class="byl-card mt-3" id="sec-cancelar">
+        <div class="byl-section-title mb-2">Cancelación de Pago Parcial — Sec. {{ fil_sec|stringformat:"06d" }}</div>
+        <div class="mb-2">
+            <label style="font-size:13px;">Saldo pendiente: $<strong id="lbl-saldo"></strong></label>
+        </div>
+        <div class="mb-2">
+            <label style="font-size:13px;">Importe a pagar ($)</label>
+            <input type="number" id="inp-importe" min="0.01" step="0.01"
+                style="width:100%;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;margin-top:4px;">
+        </div>
+        <div class="mb-2" id="sec-fecha-comp" style="display:none;">
+            <label style="font-size:13px;">Fecha próximo compromiso</label>
+            <input type="date" id="inp-fecha-comp"
+                style="width:100%;border:1px solid var(--byl-border);border-radius:4px;padding:5px;font-size:14px;margin-top:4px;">
+        </div>
+        <div id="msg-cancelar" class="mb-2" style="display:none;font-size:13px;"></div>
+        <button class="byl-btn" type="button" id="btn-cancelar-ppa">Confirmar Cancelación</button>
+    </div>
+    {% endif %}
+
+    <div class="mt-3">
+        <a class="byl-btn" href="{% url 'ventas:principal' evn %}">Volver</a>
+    </div>
+
+</div>
+
+{% if habilitar_cancelar %}
+<script>
+const CSRF        = "{{ csrf_token }}";
+const URL_CANCEL  = "{% url 'ventas:cancelar_pago_parcial' evn %}";
+const URL_BACK    = "{% url 'ventas:pago_parcial' evn %}?estd=P&sec={{ fil_sec }}";
+const SEC         = {{ fil_sec|default:0 }};
+
+// Tomar el saldo del último registro pendiente
+const registros   = {{ registros_json|safe }};
+const saldoPend   = registros.length ? registros[registros.length - 1].saldo : 0;
+
+document.getElementById('lbl-saldo').textContent = saldoPend.toFixed(2).replace('.', ',');
+
+const inpImporte   = document.getElementById('inp-importe');
+const inpFechaComp = document.getElementById('inp-fecha-comp');
+const secFechaComp = document.getElementById('sec-fecha-comp');
+const msgCancelar  = document.getElementById('msg-cancelar');
+const btnCancelar  = document.getElementById('btn-cancelar-ppa');
+
+inpImporte.value = saldoPend.toFixed(2);
+inpImporte.max   = saldoPend;
+
+inpImporte.addEventListener('input', function() {
+    const val = parseFloat(this.value) || 0;
+    secFechaComp.style.display = (val > 0 && val < saldoPend) ? '' : 'none';
+});
+
+btnCancelar.addEventListener('click', async function() {
+    const importe = parseFloat(inpImporte.value) || 0;
+    if (importe <= 0 || importe > saldoPend) {
+        mostrarMsg('Importe inválido.', 'red'); return;
+    }
+    const esParcial = importe < saldoPend;
+    let fechaComp = 0;
+    if (esParcial) {
+        const fStr = inpFechaComp.value;
+        if (!fStr) { mostrarMsg('Ingrese la fecha de próximo compromiso.', 'red'); return; }
+        const hoy = new Date(); hoy.setHours(0,0,0,0);
+        const fDate = new Date(fStr + 'T00:00:00');
+        if (fDate <= hoy) { mostrarMsg('La fecha debe ser mayor a hoy.', 'red'); return; }
+        fechaComp = parseInt(fStr.replace(/-/g, ''));
+    }
+    btnCancelar.disabled = true;
+    try {
+        const r = await fetch(URL_CANCEL, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({sec: SEC, importe, fecha_compromiso: fechaComp})
+        });
+        const d = await r.json();
+        if (d.ok) {
+            mostrarMsg(d.es_total ? '✓ Cupón cancelado totalmente.' : '✓ Pago parcial registrado.', 'green');
+            setTimeout(() => window.location.href = URL_BACK, 1500);
+        } else {
+            mostrarMsg(d.error || 'Error al procesar.', 'red');
+            btnCancelar.disabled = false;
+        }
+    } catch(e) {
+        mostrarMsg('Error de conexión.', 'red');
+        btnCancelar.disabled = false;
+    }
+});
+
+function mostrarMsg(txt, color) {
+    msgCancelar.style.color = color;
+    msgCancelar.textContent = txt;
+    msgCancelar.style.display = '';
+}
+</script>
+{% endif %}
+{% endblock %}
