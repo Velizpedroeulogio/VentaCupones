@@ -1199,7 +1199,11 @@ def get_persona_by_sec(evn, sec):
     )
     if not row or not row[0]:
         return None
-    return get_persona(row[0])
+    try:
+        nid = int(str(row[0]).strip())
+    except (ValueError, TypeError):
+        return None
+    return get_persona(nid)
 
 
 def save_persona(data):
@@ -1689,6 +1693,63 @@ def registrar_msg_proc(idpr, refe, txto, evn=None, sec=None, erro=None):
             )
     except Exception:
         pass
+
+
+def build_notif_preview(evn, sec, persona, pvt):
+    """Construye datos de preview del WhatsApp/visor para mostrar al vendedor después de la venta."""
+    import re, urllib.parse
+    try:
+        evn_info  = get_nombres_meta(evn)
+        entidad   = evn_info.get('entidad', '')
+        evento    = evn_info.get('evento', '')
+        num_cupon = str(sec).zfill(6)
+        persona   = persona or {}
+        nombre    = str(persona.get('per_nombre') or '')
+        celular   = str(persona.get('per_celular') or '').strip()
+        pvt       = pvt or {}
+
+        burl     = str(pvt.get('burl') or '').rstrip('/')
+        wmsg_tpl = str(pvt.get('wmsg') or '').strip()
+
+        dv_row = _fetchone(
+            'SELECT "INF_DV1","INF_DV2","INF_ADIC" FROM "INF_URL"'
+            ' WHERE "INF_EVN"=%s AND "INF_SEC"=%s',
+            (evn, int(sec))
+        )
+        if dv_row:
+            url_id = (str(evn).zfill(5) + num_cupon
+                      + str(dv_row[0] or '') + str(dv_row[1] or '') + str(dv_row[2] or ''))
+        else:
+            url_id = _gen_url_id(evn, sec)
+
+        url   = f"{burl}/?id={url_id}" if burl else ''
+        texto = (wmsg_tpl.format(nombre=nombre, cupon=num_cupon, url=url)
+                 if wmsg_tpl else f'{nombre}, tu cupón N° {num_cupon}: {url}')
+
+        wa_url = ''
+        if celular:
+            digits = re.sub(r'\D', '', celular)
+            if digits.startswith('549'):
+                pass
+            elif digits.startswith('54'):
+                digits = '549' + digits[2:]
+            elif digits.startswith('0'):
+                digits = '549' + digits[1:]
+            else:
+                digits = '549' + digits
+            if digits:
+                wa_url = f"https://wa.me/{digits}?text={urllib.parse.quote(texto)}"
+
+        return {
+            'nombre':    nombre,
+            'num_cupon': num_cupon,
+            'entidad':   entidad,
+            'evento':    evento,
+            'url':       url,
+            'wa_url':    wa_url,
+        }
+    except Exception:
+        return None
 
 
 def enviar_notif_venta(evn, sec, persona, pvt):

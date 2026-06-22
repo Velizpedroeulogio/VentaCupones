@@ -753,8 +753,9 @@ def confirmar_venta_api(request, evn):
         request.session.pop(key, None)
 
     svc.enviar_notif_venta(evn, int(cupon_sec), persona, pvt or {})
+    preview = svc.build_notif_preview(evn, int(cupon_sec), persona, pvt or {})
 
-    return JsonResponse({"ok": True})
+    return JsonResponse({"ok": True, "preview": preview})
 
 
 @csrf_exempt
@@ -822,10 +823,12 @@ def confirmar_efectivo_api(request, evn):
                 "pend_nom", "pend_dom", "pend_loc", "pend_ref", "pend_precio"):
         request.session.pop(key, None)
 
+    preview = None
     if not es_parcial:
         svc.enviar_notif_venta(evn, sec, persona or {}, pvt or {})
+        preview = svc.build_notif_preview(evn, sec, persona or {}, pvt or {})
 
-    return JsonResponse({"ok": True, "es_parcial": es_parcial})
+    return JsonResponse({"ok": True, "es_parcial": es_parcial, "preview": preview})
 
 
 def pago_parcial_view(request, evn):
