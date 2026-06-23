@@ -590,23 +590,27 @@ def vender_cupon_efectivo_parcial(evn, sec, usuario, nid=None, nom=None, dom=Non
 def get_ppa_list(evn, usuario, estd=None, nid=None, sec=None, fcha_comp=None):
     """Retorna registros de MDP_PPA con filtros opcionales."""
     params = [evn, str(usuario or '')]
-    where  = ' WHERE "EVN_NUM"=%s AND "VEN_COD"=%s'
+    where  = ' WHERE p."EVN_NUM"=%s AND p."VEN_COD"=%s'
     if estd:
-        where += ' AND "PPA_ESTD"=%s'
+        where += ' AND p."PPA_ESTD"=%s'
         params.append(str(estd))
     if nid:
-        where += ' AND "MDP_NID"=%s'
+        where += ' AND p."MDP_NID"=%s'
         params.append(str(nid))
     if sec:
-        where += ' AND "EVNC_SEC"=%s'
+        where += ' AND p."EVNC_SEC"=%s'
         params.append(int(sec))
     if fcha_comp:
-        where += ' AND "PPA_FCMP"=%s'
+        where += ' AND p."PPA_FCMP"=%s'
         params.append(int(fcha_comp))
     rows = _fetchall(
-        'SELECT "PPA_ID","EVNC_SEC","MDP_NID","PPA_FCHA","PPA_IMPO","PPA_FCMP","PPA_SLDO","PPA_ESTD"'
-        ' FROM "MDP_PPA"' + where +
-        ' ORDER BY "PPA_ID"',
+        'SELECT p."PPA_ID", p."EVNC_SEC", p."MDP_NID", p."PPA_FCHA", p."PPA_IMPO",'
+        '       p."PPA_FCMP", p."PPA_SLDO", p."PPA_ESTD", per."per_nombre"'
+        ' FROM "MDP_PPA" p'
+        ' LEFT JOIN "app_gbl_persona" per'
+        '   ON per."per_numero_identidad" = NULLIF(p."MDP_NID", \'\')::integer'
+        + where +
+        ' ORDER BY p."PPA_ID"',
         params
     )
     result = []
@@ -620,6 +624,7 @@ def get_ppa_list(evn, usuario, estd=None, nid=None, sec=None, fcha_comp=None):
             'fcmp_fmt': fmt_fecha(r[5]),
             'saldo':    float(r[6]) if r[6] is not None else 0.0,
             'estd':     str(r[7] or '').strip(),
+            'nombre':   str(r[8] or '').strip(),
         })
     return result
 

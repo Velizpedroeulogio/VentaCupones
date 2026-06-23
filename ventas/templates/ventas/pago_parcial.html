@@ -51,7 +51,7 @@
             </thead>
             <tbody>
                 {% for r in registros %}
-                <tr style="border-bottom:1px solid var(--byl-border);">
+                <tr style="border-bottom:{% if r.nombre %}none{% else %}1px solid var(--byl-border){% endif %};">
                     <td style="padding:4px 6px;text-align:right;">{{ r.sec|stringformat:"06d" }}</td>
                     <td style="padding:4px 6px;">{{ r.nid }}</td>
                     <td style="padding:4px 6px;text-align:center;">{{ r.fcha_fmt }}</td>
@@ -63,6 +63,12 @@
                         {% else %}<span style="color:green;">Cancelado</span>{% endif %}
                     </td>
                 </tr>
+                {% if r.nombre %}
+                <tr style="border-bottom:1px solid var(--byl-border);">
+                    <td colspan="2" style="padding:0 6px 4px;"></td>
+                    <td colspan="5" style="padding:0 6px 4px;font-size:11px;color:#666;">{{ r.nombre }}</td>
+                </tr>
+                {% endif %}
                 {% endfor %}
             </tbody>
         </table>
