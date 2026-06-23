@@ -33,6 +33,12 @@ def _fetchall(sql, params=()):
         return cur.fetchall()
 
 
+def _dv(v):
+    """Convierte un dígito verificador de DB a string sin omitir el 0.
+    str(0 or '') sería '' porque 0 es falsy — este helper evita ese bug."""
+    return '' if v is None else str(v)
+
+
 # ------------------------------------------------------------ ENCRIPTACION BYL
 def complemento_digito(c):
     return str(9 - int(c)) if str(c).isdigit() else c
@@ -1071,9 +1077,9 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
             (evn, int(sec))
         )
         if dv_row:
-            dv1  = str(dv_row[0] or '')
-            dv2  = str(dv_row[1] or '')
-            adic = str(dv_row[2] or '')
+            dv1  = _dv(dv_row[0])
+            dv2  = _dv(dv_row[1])
+            adic = _dv(dv_row[2])
             url_visor = ('https://visor-gbl-production.up.railway.app/?id='
                          + str(evn).zfill(5) + str(sec).zfill(6) + dv1 + dv2 + adic)
             texto_msg = (f'se te asignó el cupón {str(sec).zfill(6)} '
@@ -1492,9 +1498,9 @@ def enviar_notif_meta(evn, sec, celular, nombre):
             (evn, int(sec))
         )
         if dv_row:
-            dv1  = str(dv_row[0] or '')
-            dv2  = str(dv_row[1] or '')
-            adic = str(dv_row[2] or '')
+            dv1  = _dv(dv_row[0])
+            dv2  = _dv(dv_row[1])
+            adic = _dv(dv_row[2])
             url_id = str(evn).zfill(5) + num_cupon + dv1 + dv2 + adic
         else:
             url_id = _gen_url_id(evn, sec)
@@ -1606,7 +1612,7 @@ def get_preview_plantilla(evn, msg_id):
         (evn, sec)
     )
     if dv_row:
-        url_id = str(evn).zfill(5) + num_cupon + str(dv_row[0] or '') + str(dv_row[1] or '') + str(dv_row[2] or '')
+        url_id = str(evn).zfill(5) + num_cupon + _dv(dv_row[0]) + _dv(dv_row[1]) + _dv(dv_row[2])
     else:
         url_id = _gen_url_id(evn, sec)
     url = f"{burl}/?id={url_id}"
@@ -1718,7 +1724,7 @@ def build_notif_preview(evn, sec, persona, pvt):
         )
         if dv_row:
             url_id = (str(evn).zfill(5) + num_cupon
-                      + str(dv_row[0] or '') + str(dv_row[1] or '') + str(dv_row[2] or ''))
+                      + _dv(dv_row[0]) + _dv(dv_row[1]) + _dv(dv_row[2]))
         else:
             url_id = _gen_url_id(evn, sec)
 
@@ -1785,7 +1791,7 @@ def enviar_notif_venta(evn, sec, persona, pvt):
             (evn, int(sec))
         )
         if dv_row:
-            url_id = str(evn).zfill(5) + str(sec).zfill(6) + str(dv_row[0] or '') + str(dv_row[1] or '') + str(dv_row[2] or '')
+            url_id = str(evn).zfill(5) + str(sec).zfill(6) + _dv(dv_row[0]) + _dv(dv_row[1]) + _dv(dv_row[2])
         else:
             url_id = _gen_url_id(evn, sec)
         url    = f"{burl.rstrip('/')}/?id={url_id}"
