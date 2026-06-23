@@ -1,9 +1,12 @@
 import json
+import logging
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
 from . import services as svc
+
+logger = logging.getLogger(__name__)
 
 
 def _fmt_precio(valor):
@@ -888,9 +891,12 @@ def cancelar_pago_parcial_api(request, evn):
     try:
         ok, es_total, error = svc.cancelar_pago_parcial(evn, sec, usuario, importe, fecha_compromiso)
     except Exception as e:
+        logger.error("cancelar_pago_parcial exception evn=%s sec=%s usuario=%r: %s", evn, sec, usuario, e)
         return JsonResponse({"ok": False, "error": f"Error interno: {e}"})
 
     if not ok:
+        logger.warning("cancelar_pago_parcial not found: evn=%s sec=%s usuario=%r importe=%s error=%r",
+                       evn, sec, usuario, importe, error)
         return JsonResponse({"ok": False, "error": error})
 
     preview = None
