@@ -893,13 +893,15 @@ def cancelar_pago_parcial_api(request, evn):
     if not ok:
         return JsonResponse({"ok": False, "error": error})
 
+    preview = None
     if es_total:
         persona = svc.get_persona_by_sec(evn, sec)
         pvt     = svc.get_pvt_sort(evn)
         if persona:
             svc.enviar_notif_venta(evn, sec, persona, pvt or {})
+        preview = svc.build_notif_preview(evn, sec, persona or {}, pvt or {})
 
-    return JsonResponse({"ok": True, "es_total": es_total})
+    return JsonResponse({"ok": True, "es_total": es_total, "preview": preview})
 
 
 def datos_lookup_api(request, evn):

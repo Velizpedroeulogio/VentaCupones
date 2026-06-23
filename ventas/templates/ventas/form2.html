@@ -120,7 +120,6 @@
             <div class="byl-section-title mb-2">Notificacion al comprador</div>
             <div id="preview-info" style="font-size:13px;line-height:1.6;"></div>
             <div class="d-flex gap-2 mt-3">
-                <a id="btn-wa-preview" href="#" target="_blank" class="byl-btn" style="display:none;background:#25D366;">WhatsApp</a>
                 <button class="byl-btn" type="button" id="btn-preview-cerrar">Ir al inicio</button>
             </div>
         </div>
@@ -166,9 +165,8 @@ const URL_PRINCIPAL          = "{% url 'ventas:principal' evn %}";
 const btnConfirmar    = document.getElementById('btn-confirmar-venta');
 const btnPago         = document.getElementById('btn-confirmar-pago');
 const btnCancelar     = document.getElementById('btn-cancelar-pago');
-const secPreview      = document.getElementById('sec-preview');
-const previewInfo     = document.getElementById('preview-info');
-const btnWaPreview    = document.getElementById('btn-wa-preview');
+const secPreview       = document.getElementById('sec-preview');
+const previewInfo      = document.getElementById('preview-info');
 const btnPreviewCerrar = document.getElementById('btn-preview-cerrar');
 const secPago         = document.getElementById('sec-pago');
 const selFpgo         = document.getElementById('sel-fpgo');
@@ -199,10 +197,6 @@ function mostrarPreview(preview) {
         html += `</div>`;
     }
     previewInfo.innerHTML = html;
-    if (preview.wa_url) {
-        btnWaPreview.href = preview.wa_url;
-        btnWaPreview.style.display = '';
-    }
     secPreview.style.display = '';
 }
 
