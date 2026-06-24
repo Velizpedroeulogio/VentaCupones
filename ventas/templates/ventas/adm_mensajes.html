@@ -286,11 +286,28 @@ function reenviarDesdeDetalle(via) {
 }
 
 // ── WhatsApp manual (wa.me) ──
-function abrirWA(msgId) {
-    const d = MSG_DATA[String(msgId)];
-    if (!d || !d.cel) return;
-    const digits = d.cel.replace(/\D/g, '');
-    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(d.txto), '_blank');
+async function abrirWA(msgId) {
+    const local = MSG_DATA[String(msgId)];
+    if (!local || !local.cel) return;
+    try {
+        const r = await fetch(URL_PREVIEW, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+            body: JSON.stringify({msg_id: msgId})
+        });
+        const d = await r.json();
+        if (!d.ok) throw new Error(d.error || 'Error');
+        const txt =
+            `*${d.entidad}* - Cupón para Sorteo\n\n` +
+            `¡Felicidades ${d.nombre}! Ya estás participando en el sorteo *${d.evento}*. ` +
+            `Tu cupón es el "${d.num_cupon}". ¡Mucha suerte!\n\n` +
+            `Ver mi cupón: ${d.url}`;
+        const digits = (d.celular || local.cel).replace(/\D/g, '');
+        window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(txt), '_blank');
+    } catch(e) {
+        const digits = local.cel.replace(/\D/g, '');
+        window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(local.txto), '_blank');
+    }
 }
 
 // ── Preview plantilla Meta ──
