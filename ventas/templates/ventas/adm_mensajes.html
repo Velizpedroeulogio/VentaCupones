@@ -285,7 +285,7 @@ function reenviarDesdeDetalle(via) {
     }
 }
 
-// ── WhatsApp manual (wa.me) ──
+// ── WhatsApp Web manual ──
 async function abrirWA(msgId) {
     const local = MSG_DATA[String(msgId)];
     if (!local || !local.cel) return;
@@ -303,10 +303,10 @@ async function abrirWA(msgId) {
             `Tu cupón es el "${d.num_cupon}". ¡Mucha suerte!\n\n` +
             `Ver mi cupón: ${d.url}`;
         const digits = (d.celular || local.cel).replace(/\D/g, '');
-        window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(txt), '_blank');
+        window.open('https://web.whatsapp.com/send?phone=' + digits + '&text=' + encodeURIComponent(txt), '_blank');
     } catch(e) {
         const digits = local.cel.replace(/\D/g, '');
-        window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(local.txto), '_blank');
+        window.open('https://web.whatsapp.com/send?phone=' + digits + '&text=' + encodeURIComponent(local.txto), '_blank');
     }
 }
 
@@ -367,7 +367,7 @@ function enviarDesdePreview() {
     if (!_previewMsgId || !_previewCel) return;
     cerrarPreview();
     const digits = _previewCel.replace(/\D/g, '');
-    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(_previewTxto), '_blank');
+    window.open('https://web.whatsapp.com/send?phone=' + digits + '&text=' + encodeURIComponent(_previewTxto), '_blank');
 }
 
 function esc(s) {
