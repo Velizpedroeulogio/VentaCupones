@@ -13,13 +13,13 @@
     <div class="byl-title mt-2 mb-3">Administración – {{ evento_desc }}</div>
 
     <div class="byl-card">
-        <div class="mb-2">
-            <label class="byl-label">Usuario</label>
-            <input id="f-usuario" type="text" class="byl-input" autocomplete="off" placeholder="Código de usuario">
-        </div>
-        <div class="mb-3">
-            <label class="byl-label">Contraseña</label>
-            <input id="f-pwd" type="password" class="byl-input" placeholder="Contraseña">
+        <div style="display:grid;grid-template-columns:90px 1fr;gap:8px;align-items:center;" class="mb-3">
+            <label style="font-size:13px;">Usuario</label>
+            <input id="f-usuario" type="text" autocomplete="off" placeholder="Código de usuario"
+                   style="width:100%;border:1px solid #ccc;border-radius:4px;padding:5px 8px;font-size:14px;">
+            <label style="font-size:13px;">Contraseña</label>
+            <input id="f-pwd" type="password" placeholder="Contraseña"
+                   style="width:100%;border:1px solid #ccc;border-radius:4px;padding:5px 8px;font-size:14px;">
         </div>
         <div id="msg-error" class="byl-error mb-2" style="display:none;"></div>
         <button id="btn-ingresar" class="byl-btn" style="width:100%;">Ingresar</button>
