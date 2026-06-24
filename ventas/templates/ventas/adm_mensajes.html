@@ -367,7 +367,7 @@ function enviarDesdePreview() {
     if (!_previewMsgId || !_previewCel) return;
     cerrarPreview();
     const digits = _previewCel.replace(/\D/g, '');
-    window.open('https://web.whatsapp.com/send?phone=' + digits + '&text=' + encodeURIComponent(_previewTxto), '_blank');
+    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(_previewTxto), '_blank');
 }
 
 function esc(s) {
