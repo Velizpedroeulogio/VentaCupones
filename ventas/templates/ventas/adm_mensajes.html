@@ -97,7 +97,7 @@
                                 style="font-size:14px;padding:1px 5px;line-height:1;">✉</button>
                         {% endif %}
                         {% if m.cel %}
-                        <button onclick="event.stopPropagation();reenviar({{ m.id }},'W')"
+                        <button onclick="event.stopPropagation();abrirWA({{ m.id }})"
                                 title="Enviar WhatsApp"
                                 style="padding:2px 4px;line-height:1;background:#25d366;border:1px solid #1da851;border-radius:3px;cursor:pointer;display:flex;align-items:center;">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="white">
@@ -160,7 +160,7 @@
             <button class="byl-btn" onclick="cerrarPreview()"
                     style="font-size:12px;padding:6px 16px;">Cerrar</button>
             <button class="byl-btn" onclick="enviarDesdePreview()"
-                    style="font-size:12px;padding:6px 16px;background:#075e54;color:#fff;border-color:#075e54;">Enviar</button>
+                    style="font-size:12px;padding:6px 16px;background:#25d366;color:#fff;border-color:#1da851;">Enviar WA</button>
         </div>
     </div>
 </div>
@@ -274,14 +274,29 @@ function fallbackCopiar(txto, ok) {
     setTimeout(() => { ok.style.display = 'none'; }, 2000);
 }
 
-async function reenviarDesdeDetalle(via) {
+function reenviarDesdeDetalle(via) {
     const msgId = parseInt(document.getElementById('det-overlay').dataset.msgId || '0');
     if (!msgId) return;
-    await reenviar(msgId, via);
+    if (via === 'W') {
+        cerrarDetalle();
+        abrirWA(msgId);
+    } else {
+        reenviar(msgId, via);
+    }
+}
+
+// ── WhatsApp manual (wa.me) ──
+function abrirWA(msgId) {
+    const d = MSG_DATA[String(msgId)];
+    if (!d || !d.cel) return;
+    const digits = d.cel.replace(/\D/g, '');
+    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(d.txto), '_blank');
 }
 
 // ── Preview plantilla Meta ──
 let _previewMsgId = 0;
+let _previewTxto  = '';
+let _previewCel   = '';
 
 async function previewPlantilla(msgId) {
     _previewMsgId = msgId;
@@ -310,6 +325,8 @@ async function previewPlantilla(msgId) {
             `¡Felicidades ${d.nombre}! Ya estás participando en el sorteo *${d.evento}*. ` +
             `Tu cupón es el "${d.num_cupon}". ¡Mucha suerte!\n\n` +
             `Ver mi cupón: ${d.url}`;
+        _previewTxto = txt;
+        _previewCel  = d.celular || '';
         const txtHtml = esc(txt).replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
         elCel.textContent = d.celular ? '📱 ' + d.celular : '';
         elBurb.innerHTML  = txtHtml;
@@ -318,21 +335,22 @@ async function previewPlantilla(msgId) {
     }
 }
 
-function previewPlantillaDesdeDetalle() {
+async function previewPlantillaDesdeDetalle() {
     const msgId = parseInt(document.getElementById('det-overlay').dataset.msgId || '0');
     if (!msgId) return;
     cerrarDetalle();
-    previewPlantilla(msgId);
+    await previewPlantilla(msgId);
 }
 
 function cerrarPreview() {
     document.getElementById('prev-overlay').style.display = 'none';
 }
 
-async function enviarDesdePreview() {
-    if (!_previewMsgId) return;
+function enviarDesdePreview() {
+    if (!_previewMsgId || !_previewCel) return;
     cerrarPreview();
-    await reenviar(_previewMsgId, 'T');
+    const digits = _previewCel.replace(/\D/g, '');
+    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(_previewTxto), '_blank');
 }
 
 function esc(s) {
