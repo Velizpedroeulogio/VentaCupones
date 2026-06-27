@@ -1027,22 +1027,23 @@ def asignar_cupon_qr(evn, nid, nombre, fecha_nac, celular, qr_usuario='codigoQR'
         loc_id  = get_or_create_localidad(defs.get('_loc_desc', ''), prv_id)
         tid     = int(defs.get('per_tipo_identidad_id') or 1)
         tpe     = int(defs.get('per_tipo_persona_id') or 1)
-        calle   = defs.get('per_calle', '')
-        barrio  = defs.get('per_barrio', '')
-        cpos    = defs.get('per_codigo_postal', '')
-        prv_txt = defs.get('_prv_desc', '')
-        loc_txt = defs.get('_loc_desc', '')
+        calle    = defs.get('per_calle', '')
+        barrio   = defs.get('per_barrio', '')
+        cpos     = defs.get('per_codigo_postal', '')
+        prv_txt  = defs.get('_prv_desc', '')
+        loc_txt  = defs.get('_loc_desc', '')
+        barrio_id = get_or_create_barrio(barrio, loc_id)
         try:
             with connection.cursor() as cur:
                 cur.execute(
                     'INSERT INTO "app_gbl_persona"'
                     ' ("per_numero_identidad","per_fecha_nac","per_nombre",'
-                    '  "per_calle","per_barrio","per_codigo_postal","per_celular",'
+                    '  "per_calle","per_barrio_id","per_codigo_postal","per_celular",'
                     '  "per_localidad_id","per_provincia_id",'
                     '  "per_tipo_identidad_id","per_tipo_persona_id")'
                     ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
                     (int(nid), fecha_nac or None, nombre,
-                     calle, barrio, cpos, celular,
+                     calle, barrio_id, cpos, celular,
                      loc_id, prv_id, tid, tpe)
                 )
         except Exception:
@@ -1188,13 +1189,14 @@ _PERSONA_KEYS = [
 
 def get_persona(numero_identidad):
     row = _fetchone(
-        'SELECT id, per_numero_identidad, per_fecha_nac, per_nombre,'
-        '  per_calle, per_puerta, per_piso, per_depto, per_barrio,'
-        '  per_codigo_postal, per_telefono, per_celular, per_email,'
-        '  per_localidad_id, per_provincia_id, per_tipo_identidad_id,'
-        '  per_tipo_persona_id, per_alias_cbu, per_cbu'
-        ' FROM "app_gbl_persona"'
-        ' WHERE "per_numero_identidad" = %s',
+        'SELECT p.id, p.per_numero_identidad, p.per_fecha_nac, p.per_nombre,'
+        '  p.per_calle, p.per_puerta, p.per_piso, p.per_depto, b.bar_nombre,'
+        '  p.per_codigo_postal, p.per_telefono, p.per_celular, p.per_email,'
+        '  p.per_localidad_id, p.per_provincia_id, p.per_tipo_identidad_id,'
+        '  p.per_tipo_persona_id, p.per_alias_cbu, p.per_cbu'
+        ' FROM "app_gbl_persona" p'
+        ' LEFT JOIN "app_core_barrio" b ON b.id = p."per_barrio_id"'
+        ' WHERE p."per_numero_identidad" = %s',
         (int(numero_identidad),)
     )
     if not row:
@@ -1220,12 +1222,13 @@ def get_persona_by_sec(evn, sec):
 def save_persona(data):
     provincia_id = get_or_create_provincia(data.get('per_provincia_id'))
     localidad_id = get_or_create_localidad(data.get('per_localidad_id'), provincia_id)
+    barrio_id    = get_or_create_barrio(data.get('per_barrio'), localidad_id)
 
     with connection.cursor() as cur:
         cur.execute(
             'INSERT INTO "app_gbl_persona"'
             ' ("per_numero_identidad","per_fecha_nac","per_nombre",'
-            '  "per_calle","per_puerta","per_piso","per_depto","per_barrio",'
+            '  "per_calle","per_puerta","per_piso","per_depto","per_barrio_id",'
             '  "per_codigo_postal","per_telefono","per_celular","per_email",'
             '  "per_localidad_id","per_provincia_id","per_tipo_identidad_id",'
             '  "per_tipo_persona_id","per_alias_cbu","per_cbu")'
@@ -1238,7 +1241,7 @@ def save_persona(data):
                 data.get('per_puerta') or None,
                 data.get('per_piso') or None,
                 data.get('per_depto') or None,
-                data.get('per_barrio') or None,
+                barrio_id,
                 data.get('per_codigo_postal') or None,
                 data.get('per_telefono') or None,
                 data.get('per_celular') or None,
@@ -1289,6 +1292,25 @@ def get_or_create_localidad(nombre, provincia_id):
         cur.execute(
             'INSERT INTO "app_core_localidad" ("loc_nombre", "loc_cp", "loc_provincia_id") VALUES (%s, %s, %s) RETURNING id',
             (nombre, '', provincia_id)
+        )
+        return cur.fetchone()[0]
+
+
+def get_or_create_barrio(nombre, localidad_id):
+    nombre = str(nombre or '').strip()
+    if not nombre or not localidad_id:
+        return None
+    row = _fetchone(
+        'SELECT id FROM "app_core_barrio"'
+        ' WHERE UPPER("bar_nombre") = UPPER(%s) AND "bar_localidad_id" = %s',
+        (nombre, localidad_id)
+    )
+    if row:
+        return row[0]
+    with connection.cursor() as cur:
+        cur.execute(
+            'INSERT INTO "app_core_barrio" ("bar_nombre", "bar_localidad_id") VALUES (%s, %s) RETURNING id',
+            (nombre, localidad_id)
         )
         return cur.fetchone()[0]
 
