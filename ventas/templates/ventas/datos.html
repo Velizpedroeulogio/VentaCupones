@@ -57,8 +57,9 @@ const CAMPOS_TEXTO = [
 ];
 const CAMPOS_SELECT = ['per_tipo_identidad_id','per_tipo_persona_id'];
 const CAMPOS_LOOKUP = [
-    {id:'per_provincia_id', txt:'per_provincia_txt', drop:'drop-provincia', tipo:'provincia'},
-    {id:'per_localidad_id', txt:'per_localidad_txt', drop:'drop-localidad', tipo:'localidad'},
+    {id:'per_provincia_id',    txt:'per_provincia_txt',    drop:'drop-provincia',    tipo:'provincia'},
+    {id:'per_departamento_id', txt:'per_departamento_txt', drop:'drop-departamento', tipo:'departamento'},
+    {id:'per_localidad_id',    txt:'per_localidad_txt',    drop:'drop-localidad',    tipo:'localidad'},
 ];
 
 let personaEncontrada = false;
@@ -138,6 +139,10 @@ function cargarPersona(persona) {
     const locTxt = document.getElementById('f-per_localidad_txt');
     if (locHid) locHid.value = persona._loc_desc || '';
     if (locTxt) locTxt.value = persona._loc_desc || '';
+    const depHid = document.getElementById('f-per_departamento_id');
+    const depTxt = document.getElementById('f-per_departamento_txt');
+    if (depHid) depHid.value = persona._dep_desc || '';
+    if (depTxt) depTxt.value = persona._dep_desc || '';
     const prvHid = document.getElementById('f-per_provincia_id');
     const prvTxt = document.getElementById('f-per_provincia_txt');
     if (prvHid) prvHid.value = persona._prv_desc || '';
@@ -171,9 +176,15 @@ function setupLookup(cfg) {
         lastItems = [];
         if (q.length < 2) { document.getElementById(cfg.drop).style.display = 'none'; return; }
         let url = URL_LOOKUP + '?tipo=' + cfg.tipo + '&q=' + encodeURIComponent(q);
+        if (cfg.tipo === 'departamento') {
+            const prv = document.getElementById('f-per_provincia_id').value;
+            if (prv) url += '&prov=' + encodeURIComponent(prv);
+        }
         if (cfg.tipo === 'localidad') {
-            const prvId = document.getElementById('f-per_provincia_id').value;
-            if (prvId) url += '&prov=' + prvId;
+            const prv = document.getElementById('f-per_provincia_id').value;
+            if (prv) url += '&prov=' + encodeURIComponent(prv);
+            const dep = document.getElementById('f-per_departamento_id').value;
+            if (dep) url += '&dep=' + encodeURIComponent(dep);
         }
         try {
             const d = await (await fetch(url)).json();

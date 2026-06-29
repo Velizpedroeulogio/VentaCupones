@@ -1326,13 +1326,58 @@ def get_lookup_provincia(q):
     return [{"id": r[0], "nombre": str(r[1])} for r in rows]
 
 
-def get_lookup_localidad(q, provincia_id=None):
+def get_lookup_departamento(q, provincia_nombre=None):
+    params = [f'%{q}%']
+    sql = ('SELECT d.id, d."dep_nombre" FROM "app_core_departamento" d'
+           ' WHERE UPPER(d."dep_nombre") LIKE UPPER(%s)')
+    if provincia_nombre:
+        row = _fetchone(
+            'SELECT id FROM "app_core_provincia" WHERE UPPER("pro_provincia") = UPPER(%s)',
+            (str(provincia_nombre).strip(),)
+        )
+        if row:
+            sql += ' AND d."dep_provincia_id" = %s'
+            params.append(row[0])
+    sql += ' ORDER BY d."dep_nombre" LIMIT 10'
+    rows = _fetchall(sql, params)
+    return [{"id": r[0], "nombre": str(r[1])} for r in rows]
+
+
+def get_dep_nombre_by_localidad_id(loc_id):
+    if not loc_id:
+        return ''
+    try:
+        row = _fetchone(
+            'SELECT d."dep_nombre" FROM "app_core_departamento" d'
+            ' JOIN "app_core_localidad" l ON l."loc_departamento_id" = d.id'
+            ' WHERE l.id = %s',
+            (int(loc_id),)
+        )
+        return str(row[0]) if row else ''
+    except Exception:
+        return ''
+
+
+def get_lookup_localidad(q, provincia_nombre=None, departamento_nombre=None):
     params = [f'%{q}%']
     sql = ('SELECT id, "loc_nombre" FROM "app_core_localidad"'
            ' WHERE UPPER("loc_nombre") LIKE UPPER(%s)')
-    if provincia_id:
-        sql += ' AND "loc_provincia_id" = %s'
-        params.append(int(provincia_id))
+    if provincia_nombre:
+        row = _fetchone(
+            'SELECT id FROM "app_core_provincia" WHERE UPPER("pro_provincia") = UPPER(%s)',
+            (str(provincia_nombre).strip(),)
+        )
+        if row:
+            sql += ' AND "loc_provincia_id" = %s'
+            params.append(row[0])
+    if departamento_nombre:
+        row = _fetchone(
+            'SELECT id FROM "app_core_departamento" WHERE UPPER("dep_nombre") = UPPER(%s)',
+            (str(departamento_nombre).strip(),)
+        )
+        if row:
+            sql += ' AND "loc_departamento_id" = %s'
+            params.append(row[0])
     sql += ' ORDER BY "loc_nombre" LIMIT 10'
     rows = _fetchall(sql, params)
     return [{"id": r[0], "nombre": str(r[1])} for r in rows]

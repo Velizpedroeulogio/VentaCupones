@@ -635,6 +635,7 @@ def datos_buscar_api(request, evn):
     if persona:
         persona['_loc_desc'] = svc.get_nombre_by_id('app_core_localidad', 'loc_nombre', persona.get('per_localidad_id'))
         persona['_prv_desc'] = svc.get_nombre_by_id('app_core_provincia', 'pro_provincia', persona.get('per_provincia_id'))
+        persona['_dep_desc'] = svc.get_dep_nombre_by_localidad_id(persona.get('per_localidad_id'))
         persona['_tid_desc'] = svc.get_nombre_by_id('app_gbl_tipoidentidad','tid_tipo_identidad',persona.get('per_tipo_identidad_id'))
         persona['_tpe_desc'] = svc.get_nombre_by_id('app_gbl_tipopersona', 'tpe_tipo_persona',  persona.get('per_tipo_persona_id'))
         return JsonResponse({"ok": True, "found": True, "persona": persona})
@@ -925,10 +926,15 @@ def datos_lookup_api(request, evn):
         if len(q) < 2:
             return JsonResponse({"ok": True, "items": []})
         return JsonResponse({"ok": True, "items": svc.get_lookup_provincia(q)})
+    elif tipo == "departamento":
+        if len(q) < 2:
+            return JsonResponse({"ok": True, "items": []})
+        return JsonResponse({"ok": True, "items": svc.get_lookup_departamento(q, prov or None)})
     elif tipo == "localidad":
         if len(q) < 2:
             return JsonResponse({"ok": True, "items": []})
-        return JsonResponse({"ok": True, "items": svc.get_lookup_localidad(q, prov or None)})
+        dep = request.GET.get("dep", "").strip()
+        return JsonResponse({"ok": True, "items": svc.get_lookup_localidad(q, prov or None, dep or None)})
     return JsonResponse({"ok": False, "error": "Tipo inválido"})
 
 
