@@ -86,6 +86,12 @@ def autoges_view(request, evn):
     """Acceso directo (via link/QR) para ventas autogestionadas: no pide
     usuario/clave, asume el vendedor '*AutoGes'. La forma de pago queda
     limitada a Tarjeta Debito/Credito/QR (ver form2.html)."""
+    # Arranca siempre una venta nueva: descarta cupon/persona que hayan
+    # quedado en la sesion de una venta anterior (mismo navegador).
+    for key in ("cupon_sec", "persona_dni", "sel_cantidad", "sel_nums_pref",
+                "pend_nom", "pend_dom", "pend_loc", "pend_ref", "pend_precio"):
+        request.session.pop(key, None)
+
     request.session["evn"]     = evn
     request.session["usuario"] = "*AutoGes"
     request.session["nombre"]  = "Autogestión"
