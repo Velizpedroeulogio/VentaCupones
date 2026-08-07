@@ -86,6 +86,15 @@ def autoges_view(request, evn):
     """Acceso directo (via link/QR) para ventas autogestionadas: no pide
     usuario/clave, asume el vendedor '*AutoGes'. La forma de pago queda
     limitada a Tarjeta Debito/Credito/QR (ver form2.html)."""
+    bloqueo_msg = svc.check_qr_habilitado(evn)
+    if bloqueo_msg:
+        return render(request, "ventas/form1.html", {
+            "evn":          evn,
+            "evento_desc":  svc.get_evento(evn)['evento'],
+            "img_evento":   svc.get_imagen_evento(evn),
+            "bloqueo_msg":  bloqueo_msg,
+        })
+
     # Arranca siempre una venta nueva: descarta cupon/persona que hayan
     # quedado en la sesion de una venta anterior (mismo navegador).
     for key in ("cupon_sec", "persona_dni", "sel_cantidad", "sel_nums_pref",
@@ -757,6 +766,8 @@ def confirmar_venta_api(request, evn):
     fpgo = str(body.get('fpgo', '') or '').strip()
     if fpgo not in ('E', 'T', 'C', 'D', 'Q'):
         return JsonResponse({"ok": False, "error": "Seleccione la forma de pago"})
+    if request.session.get("autoges") and fpgo in ('E', 'T'):
+        return JsonResponse({"ok": False, "error": "Forma de pago no disponible en autogestión"})
 
     try:
         persona = svc.get_persona(persona_dni)
@@ -817,6 +828,8 @@ def confirmar_efectivo_api(request, evn):
         return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
     if request.session.get("evn") != evn:
         return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    if request.session.get("autoges"):
+        return JsonResponse({"ok": False, "error": "Forma de pago no disponible en autogestión"})
 
     cupon_sec   = request.session.get("cupon_sec")
     persona_dni = request.session.get("persona_dni")
