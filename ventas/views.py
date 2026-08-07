@@ -163,7 +163,12 @@ def seleccionar_view(request, evn):
     nums_pref    = request.session.get("sel_nums_pref") or []
     sel_cantidad = request.session.get("sel_cantidad") or ""
     usuario      = request.session.get("usuario", "")
-    tope_info    = svc.check_tope_ventas(evn, usuario)
+    if request.session.get("autoges"):
+        # No aplica: *AutoGes es compartido entre clientes, no un vendedor
+        # individual que deba rendir cuentas.
+        tope_info = {"tope": 0, "count": 0, "bloqueado": False}
+    else:
+        tope_info = svc.check_tope_ventas(evn, usuario)
 
     return render(request, "ventas/seleccionar.html", {
         "evn":           evn,
@@ -198,7 +203,10 @@ def proximo_api(request, evn):
     request.session["sel_nums_pref"] = nums_pref
 
     usuario   = request.session.get("usuario", "")
-    tope_info = svc.check_tope_ventas(evn, usuario)
+    if request.session.get("autoges"):
+        tope_info = {"tope": 0, "count": 0, "bloqueado": False}
+    else:
+        tope_info = svc.check_tope_ventas(evn, usuario)
     if tope_info['bloqueado']:
         return JsonResponse({
             "ok": False,
