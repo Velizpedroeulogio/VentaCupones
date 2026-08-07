@@ -77,7 +77,41 @@ def principal(request, evn):
         "publicaciones": svc.get_publicaciones(evn),
         "cupon_sec":     str(cupon_sec).zfill(6) if cupon_sec else "",
         "persona_dni":   str(persona_dni) if persona_dni else "",
+        "autoges":       request.session.get("autoges", False),
     })
+
+
+# ================================================================ AUTOGESTION
+def autoges_view(request, evn):
+    """Acceso directo (via link/QR) para ventas autogestionadas: no pide
+    usuario/clave, asume el vendedor '*AutoGes'. La forma de pago queda
+    limitada a Tarjeta Debito/Credito/QR (ver form2.html)."""
+    request.session["evn"]     = evn
+    request.session["usuario"] = "*AutoGes"
+    request.session["nombre"]  = "Autogestión"
+    request.session["autoges"] = True
+    return redirect("ventas:principal", evn=evn)
+
+
+def autoges_flyer_view(request, evn):
+    import base64, io, qrcode
+    url_ag = request.build_absolute_uri(f'/{evn}/autoges/')
+    qr = qrcode.QRCode(version=3, error_correction=qrcode.constants.ERROR_CORRECT_H,
+                       box_size=10, border=2)
+    qr.add_data(url_ag)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#1565c0", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    qr_b64 = base64.b64encode(buf.getvalue()).decode()
+    return render(request, 'ventas/autoges_flyer.html', {
+        'evn':         evn,
+        'evento_desc': svc.get_evento(evn)['evento'],
+        'img_evento':  svc.get_imagen_evento(evn),
+        'url_ag':      url_ag,
+        'qr_b64':      qr_b64,
+    })
+# ============================================================ FIN AUTOGESTION
 
 
 def sorteos_fecha(request, evn, fecha):
