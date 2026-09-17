@@ -136,23 +136,16 @@
             <div style="flex:0 0 auto;max-width:150px;text-align:center;">
                 {% if pub.enlc %}
                 <a href="{{ pub.enlc }}" target="_blank" style="text-decoration:none;color:inherit;">
-                    {% if pub.imag %}<img src="{{ pub.imag }}" alt="{{ pub.dscr }}" style="max-width:100%;max-height:80px;object-fit:contain;display:block;margin:0 auto 8px;">{% endif %}
-                    <span style="font-size:12px;line-height:2;color:var(--byl-accent);">{{ pub.dscr }}</span>
+                    {% if pub.imag %}<img src="{{ pub.imag }}" alt="{{ pub.dscr }}" style="max-width:100%;max-height:80px;object-fit:contain;display:block;margin:0 auto 2px;">{% endif %}
+                    <span style="font-size:12px;line-height:1.3;color:var(--byl-accent);">{{ pub.dscr }}</span>
                 </a>
                 {% else %}
-                    {% if pub.imag %}<img src="{{ pub.imag }}" alt="{{ pub.dscr }}" style="max-width:100%;max-height:80px;object-fit:contain;display:block;margin:0 auto 8px;">{% endif %}
-                    <span style="font-size:12px;line-height:2;">{{ pub.dscr }}</span>
+                    {% if pub.imag %}<img src="{{ pub.imag }}" alt="{{ pub.dscr }}" style="max-width:100%;max-height:80px;object-fit:contain;display:block;margin:0 auto 2px;">{% endif %}
+                    <span style="font-size:12px;line-height:1.3;">{{ pub.dscr }}</span>
                 {% endif %}
             </div>
             {% endfor %}
         </div>
-    </div>
-    {% endif %}
-
-    <!-- Sponsors -->
-    {% if img_sponsor %}
-    <div class="mt-2">
-        <img class="byl-img-evento" src="{{ img_sponsor }}" alt="Sponsors">
     </div>
     {% endif %}
 
