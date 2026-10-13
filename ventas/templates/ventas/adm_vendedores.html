@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Vendedores – {{ evento_desc }}{% endblock %}
+
+{% block content %}
+<div class="byl-pad">
+
+    {% if img_evento %}
+    <div class="mt-2 mb-2">
+        <img class="byl-img-evento" src="{{ img_evento }}" alt="Evento">
+    </div>
+    {% endif %}
+
+    <!-- Encabezado -->
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;" class="mt-2 mb-2">
+        <div class="byl-title">Vendedores – {{ evento_desc }}</div>
+        <div style="font-size:12px;color:#666;">
+            {{ nombre }} &nbsp;|&nbsp;
+            <a href="{% url 'ventas:adm_principal' evn %}" style="color:var(--byl-accent);">Rendiciones</a>
+            &nbsp;|&nbsp;
+            <a href="{% url 'ventas:adm_mensajes' evn %}" style="color:var(--byl-accent);">Mensajes</a>
+            &nbsp;|&nbsp;
+            <a href="{% url 'ventas:adm_logout' evn %}" style="color:var(--byl-accent);">Salir</a>
+        </div>
+    </div>
+
+    <div class="byl-card" style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.5;">
+        <b>Tope de ventas sin rendir:</b> cantidad máxima de ventas ingresadas y todavía no rendidas que puede
+        tener un vendedor; al llegar al tope no puede seguir vendiendo hasta rendir.
+        Tope del evento: <b>{% if tope_evento %}{{ tope_evento }}{% else %}sin límite{% endif %}</b>
+        (se usa cuando el vendedor tiene 0). Para el vendedor: 0 = usa el tope del evento.
+    </div>
+
+    {% if vendedores %}
+    {% for v in vendedores %}
+    <div class="byl-card vend" data-usuario="{{ v.usuario }}" style="padding:8px 12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;align-items:baseline;">
+            <div style="font-size:13px;">
+                <b>{{ v.usuario }}</b> <span style="color:#666;">{{ v.nombre }}</span>
+                <span style="font-size:11px;color:#888;">({% if v.tipo == 'A' %}Administrador{% elif v.tipo == 'V' %}Vendedor{% else %}{{ v.tipo }}{% endif %})</span>
+            </div>
+            <div class="estado-tope" style="font-size:12px;{% if v.bloqueado %}color:#c62828;font-weight:bold;{% else %}color:#444;{% endif %}">
+                Sin rendir: <span class="sin-rendir">{{ v.sin_rendir }}</span> /
+                <span class="tope-efectivo">{% if v.tope_efectivo %}{{ v.tope_efectivo }}{% else %}sin límite{% endif %}</span>
+                <span class="origen" style="color:#888;font-weight:normal;">({{ v.origen_tope }})</span>
+                <span class="bloq">{% if v.bloqueado %} – no puede vender{% endif %}</span>
+            </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;margin-top:6px;">
+            <div>
+                <div style="font-size:11px;color:#666;margin-bottom:2px;">Estado</div>
+                <select class="f-estd" style="border:1px solid #ccc;border-radius:4px;padding:3px 6px;font-size:13px;"
+                        {% if v.usuario == usuario_adm %}title="Tu propio usuario: no se puede desactivar"{% endif %}>
+                    {% for cod, txt in estados %}
+                    <option value="{{ cod }}" {% if v.estd == cod %}selected{% endif %}>{{ txt }}</option>
+                    {% endfor %}
+                    {% if v.estd and v.estd != 'A' and v.estd != 'I' %}<option value="{{ v.estd }}" selected>{{ v.estd }}</option>{% endif %}
+                </select>
+            </div>
+            <div>
+                <div style="font-size:11px;color:#666;margin-bottom:2px;">Vigencia desde</div>
+                <input class="f-fchd" type="date" value="{{ v.fchd }}"
+                       style="border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:13px;">
+            </div>
+            <div>
+                <div style="font-size:11px;color:#666;margin-bottom:2px;">Vigencia hasta</div>
+                <input class="f-fchh" type="date" value="{{ v.fchh }}"
+                       style="border:1px solid #ccc;border-radius:4px;padding:2px 5px;font-size:13px;">
+            </div>
+            <div>
+                <div style="font-size:11px;color:#666;margin-bottom:2px;">Tope sin rendir</div>
+                <input class="f-tope" type="number" min="0" max="100000" step="1" value="{{ v.tope }}"
+                       style="width:80px;border:1px solid #ccc;border-radius:4px;padding:3px 6px;font-size:13px;">
+            </div>
+            <button class="byl-btn btn-guardar" disabled
+                    style="opacity:.4;background:var(--byl-accent);color:white;padding:5px 14px;">Guardar</button>
+        </div>
+        <div class="msg" style="display:none;font-size:12px;margin-top:6px;"></div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="byl-card" style="font-size:13px;color:#999;">El evento no tiene usuarios cargados.</div>
+    {% endif %}
+
+</div>
+
+<script>
+const URL_GUARDAR = "{% url 'ventas:adm_vendedor_guardar' evn %}";
+const CSRF = "{{ csrf_token }}";
+
+document.querySelectorAll('.vend').forEach(card => {
+    const btn = card.querySelector('.btn-guardar');
+    const campos = ['.f-estd', '.f-fchd', '.f-fchh', '.f-tope'].map(s => card.querySelector(s));
+    const original = () => campos.map(c => c.value).join('|');
+    let base = original();
+    const marcar = () => {
+        const cambio = original() !== base;
+        btn.disabled = !cambio;
+        btn.style.opacity = cambio ? '1' : '.4';
+    };
+    campos.forEach(c => { c.addEventListener('input', marcar); c.addEventListener('change', marcar); });
+
+    btn.addEventListener('click', async () => {
+        const msg = card.querySelector('.msg');
+        btn.disabled = true; btn.textContent = 'Guardando...';
+        msg.style.display = 'none';
+        try {
+            const r = await fetch(URL_GUARDAR, {
+                method: 'POST',
+                headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    usuario: card.dataset.usuario,
+                    estd: campos[0].value, fchd: campos[1].value, fchh: campos[2].value, tope: campos[3].value
+                })
+            });
+            const d = await r.json();
+            msg.style.display = '';
+            if (d.ok) {
+                msg.style.color = '#2e7d32';
+                msg.textContent = 'Guardado.';
+                base = original();
+                const v = d.vendedor;
+                if (v) {
+                    const et = card.querySelector('.estado-tope');
+                    card.querySelector('.sin-rendir').textContent = v.sin_rendir;
+                    card.querySelector('.tope-efectivo').textContent = v.tope_efectivo || 'sin límite';
+                    card.querySelector('.origen').textContent = '(' + v.origen_tope + ')';
+                    card.querySelector('.bloq').textContent = v.bloqueado ? ' – no puede vender' : '';
+                    et.style.color = v.bloqueado ? '#c62828' : '#444';
+                    et.style.fontWeight = v.bloqueado ? 'bold' : 'normal';
+                }
+            } else {
+                msg.style.color = '#c62828';
+                msg.textContent = d.error || 'Error al guardar';
+            }
+        } catch (e) {
+            msg.style.display = '';
+            msg.style.color = '#c62828';
+            msg.textContent = 'Error de conexión';
+        }
+        btn.textContent = 'Guardar';
+        marcar();
+    });
+});
+</script>
+{% endblock %}

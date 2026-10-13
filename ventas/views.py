@@ -483,6 +483,44 @@ def adm_certificar_api(request, evn):
     return JsonResponse({"ok": ok, "error": msg if not ok else ""})
 
 
+def adm_vendedores_view(request, evn):
+    """Vendedores del evento: estado, vigencia y tope de ventas sin rendir."""
+    if request.session.get("adm_evn") != evn:
+        return redirect("ventas:adm_login", evn=evn)
+    return render(request, "ventas/adm_vendedores.html", {
+        "evn":         evn,
+        "evento_desc": svc.get_evento(evn)['evento'],
+        "img_evento":  svc.get_imagen_evento(evn),
+        "nombre":      request.session.get("adm_nombre", ""),
+        "usuario_adm": request.session.get("adm_usuario", ""),
+        "vendedores":  svc.get_vendedores_admin(evn),
+        "tope_evento": svc.get_tope_evento(evn),
+        "estados":     svc.ESTADOS_VENDEDOR,
+    })
+
+
+def adm_vendedor_guardar_api(request, evn):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Método no permitido"}, status=405)
+    if request.session.get("adm_evn") != evn:
+        return JsonResponse({"ok": False, "error": "Sesión inválida"})
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"ok": False, "error": "JSON inválido"})
+    ok, msg = svc.actualizar_vendedor(
+        evn, body.get("usuario"), body.get("estd"), body.get("fchd"), body.get("fchh"), body.get("tope"),
+        usuario_admin=request.session.get("adm_usuario", ""))
+    if not ok:
+        return JsonResponse({"ok": False, "error": msg})
+    import logging
+    logging.getLogger(__name__).info("adm_vendedor evn=%s adm=%s usuario=%s estd=%s fchd=%s fchh=%s tope=%s",
+                                     evn, request.session.get("adm_usuario", ""), body.get("usuario"),
+                                     body.get("estd"), body.get("fchd"), body.get("fchh"), body.get("tope"))
+    fila = next((v for v in svc.get_vendedores_admin(evn) if v["usuario"] == str(body.get("usuario", "")).strip()), None)
+    return JsonResponse({"ok": True, "vendedor": fila})
+
+
 # ================================================================ FIN ADMIN
 def rendicion_view(request, evn):
     if request.session.get("evn") != evn:

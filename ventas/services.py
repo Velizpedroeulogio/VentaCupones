@@ -733,6 +733,94 @@ def validate_admin_user(evn, usuario, pwd):
     return True, str(nombre or ''), ''
 
 
+# ------------------------------------------------------------------ ADMIN: VENDEDORES
+ESTADOS_VENDEDOR = [('A', 'Activo'), ('I', 'Inactivo')]
+
+
+def _aaaammdd_a_iso(v):
+    s = str(v or '').strip()
+    return f"{s[0:4]}-{s[4:6]}-{s[6:8]}" if len(s) == 8 and s.isdigit() else ''
+
+
+def get_tope_evento(evn):
+    row = _fetchone('SELECT "EVN_TOPVTA" FROM "EVN_DEF" WHERE "EVN_NUM" = %s', (evn,))
+    return int(row[0]) if row and row[0] else 0
+
+
+def get_vendedores_admin(evn):
+    """Usuarios del evento con estado, vigencia, tope propio y ventas sin rendir
+    (la misma cuenta que usa check_tope_ventas)."""
+    tope_evn = get_tope_evento(evn)
+    rows = _fetchall(
+        'SELECT U."USR_IDEU", U."USR_NOMB", U."USR_TUSR", U."USR_ESTD",'
+        '       U."USR_FCHD", U."USR_FCHH", COALESCE(U."USR_TOPVTA", 0),'
+        '       (SELECT COUNT(*) FROM "MDP_MOV" M'
+        '         WHERE M."EVN_NUM" = U."USR_EVNX" AND M."VEN_COD" = U."USR_IDEU"'
+        '           AND M."PRD_ID" = 1 AND M."MDP_ESTD" = \'I\')'
+        '  FROM "USR_VTAS" U'
+        ' WHERE U."USR_EVNX" = %s'
+        ' ORDER BY U."USR_TUSR" DESC, U."USR_IDEU"',
+        (evn,)
+    )
+    res = []
+    for ideu, nomb, tusr, estd, fchd, fchh, tope, sin_rendir in rows:
+        tope = int(tope or 0)
+        efectivo = tope or tope_evn
+        res.append({
+            'usuario':    str(ideu or '').strip(),
+            'nombre':     str(nomb or ''),
+            'tipo':       str(tusr or '').strip(),
+            'estd':       str(estd or '').strip(),
+            'fchd':       _aaaammdd_a_iso(fchd),
+            'fchh':       _aaaammdd_a_iso(fchh),
+            'tope':       tope,
+            'tope_efectivo': efectivo,
+            'origen_tope':   'propio' if tope else ('evento' if tope_evn else 'sin limite'),
+            'sin_rendir': int(sin_rendir or 0),
+            'bloqueado':  bool(efectivo) and int(sin_rendir or 0) >= efectivo,
+        })
+    return res
+
+
+def actualizar_vendedor(evn, usuario, estd, fchd, fchh, tope, usuario_admin=''):
+    """Modifica estado, vigencia y tope de un usuario del evento.
+    fchd/fchh: 'AAAA-MM-DD' o ''. Devuelve (ok, mensaje)."""
+    from datetime import date as _date
+    usuario = str(usuario or '').strip()
+    estd = str(estd or '').strip().upper()
+    if estd not in {e for e, _ in ESTADOS_VENDEDOR}:
+        return False, 'Estado invalido'
+    fechas = []
+    for txt, nombre in ((fchd, 'Vigencia desde'), (fchh, 'Vigencia hasta')):
+        txt = str(txt or '').strip()
+        if not txt:
+            fechas.append(None)
+            continue
+        try:
+            fechas.append(int(_date.fromisoformat(txt).strftime('%Y%m%d')))
+        except ValueError:
+            return False, f'{nombre}: fecha invalida'
+    if fechas[0] and fechas[1] and fechas[0] > fechas[1]:
+        return False, 'La vigencia desde es posterior a la vigencia hasta'
+    try:
+        tope = int(str(tope if tope not in (None, '') else 0).strip())
+    except ValueError:
+        return False, 'El tope debe ser un numero entero'
+    if tope < 0 or tope > 100000:
+        return False, 'El tope debe estar entre 0 y 100000'
+    if usuario == str(usuario_admin or '').strip() and estd != 'A':
+        return False, 'No podes desactivar tu propio usuario administrador'
+    with connection.cursor() as cur:
+        cur.execute(
+            'UPDATE "USR_VTAS" SET "USR_ESTD" = %s, "USR_FCHD" = %s, "USR_FCHH" = %s, "USR_TOPVTA" = %s'
+            ' WHERE "USR_EVNX" = %s AND "USR_IDEU" = %s',
+            (estd, fechas[0], fechas[1], tope, evn, usuario)
+        )
+        if cur.rowcount != 1:
+            return False, 'Usuario no encontrado'
+    return True, ''
+
+
 def get_rendiciones_admin(evn, desde=None, hasta=None):
     params = [evn, 2]
     where_extra = ''
